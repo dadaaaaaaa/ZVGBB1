@@ -216,7 +216,7 @@ void HashTable::addLexemeManually() {
     while (true) {
         type = getValidatedInput(
             "¬ведите тип лексемы (30 - идентификатор, 40 - константа): ",
-            10, 40);
+            30, 40);
 
         if ( type == 30 || type == 40) {
             break;
