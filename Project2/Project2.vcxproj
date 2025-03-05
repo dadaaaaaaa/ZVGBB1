@@ -135,6 +135,12 @@
     <ClInclude Include="Lexeme.h" />
     <ClInclude Include="HashTable.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="constants.txt" />
+    <Text Include="delimiters.txt" />
+    <Text Include="identifiers.txt" />
+    <Text Include="keywords.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

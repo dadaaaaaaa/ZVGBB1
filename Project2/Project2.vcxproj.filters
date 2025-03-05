@@ -33,4 +33,18 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="constants.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="delimiters.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="identifiers.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="keywords.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
