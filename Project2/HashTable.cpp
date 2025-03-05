@@ -174,7 +174,7 @@ void HashTable::saveToFile(const std::string& filename, int type) const {
 
     std::ofstream file(filename);
     if (file.is_open()) {
-        if (type == 10 || type == 30) { // Переменная таблица
+        if (type == 40 || type == 30) { // Переменная таблица
             for (size_t i = 0; i < variableTable.size(); ++i) {
                 if (variableTable[i] != nullptr && variableTable[i]->getType() == type) {
                     file << variableTable[i]->getValue() << "\n";

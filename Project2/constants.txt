@@ -1,6 +1,6 @@
-Continue
-While
 break
-do
+While
+Continue
 else
 if
+do

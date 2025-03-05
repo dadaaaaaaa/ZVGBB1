@@ -39,8 +39,8 @@ private:
     size_t findNextFreeIndex(size_t index) const; // Поиск следующего свободного индекса
 
     void sortConstantTable();
-    std::vector<std::unique_ptr<Lexeme>> variableTable; // Переменная таблица (ключевые слова и идентификаторы)
-    std::vector<std::unique_ptr<Lexeme>> constantTable; // Постоянная таблица (разделители и константы)
+    std::vector<std::unique_ptr<Lexeme>> variableTable; // Переменная таблица (40 константы и 30 идентификаторы)
+    std::vector<std::unique_ptr<Lexeme>> constantTable; // Постоянная таблица (20 разделители и 10 ключевые слова )
 
     std::unordered_map<std::string, std::string> attributes; // Атрибуты лексем
 
