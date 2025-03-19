@@ -1,6 +1,7 @@
 #include <iostream>
-#include "HashTable.h"
+#include "Scanner.h" // Подключаем заголовочный файл сканера
 #include <clocale>
+
 void displayMenu() {
     std::cout << "=== Меню ===\n";
     std::cout << "1. Добавить лексему вручную\n";
@@ -12,12 +13,13 @@ void displayMenu() {
     std::cout << "7. Поиск номера лексемы в постоянной таблице по имени\n";
     std::cout << "8. Добавить атрибут к лексеме\n";
     std::cout << "9. Получить атрибут лексемы\n";
-    std::cout << "10. Выход\n";
+    std::cout << "10. Запустить сканер\n"; // Новая опция для сканера
+    std::cout << "11. Выход\n";
     std::cout << "Выберите опцию: ";
 }
 
 int main() {
-    HashTable ht(100);
+    HashTable ht; // Создаем хеш-таблицу (без указания размера)
     setlocale(LC_ALL, "");
 
     // Загрузка данных из файлов
@@ -29,7 +31,7 @@ int main() {
     int choice;
     do {
         displayMenu();
-        choice = HashTable::getValidatedInput("", 1, 10);
+        choice = HashTable::getValidatedInput("", 1, 11); // Обновлен диапазон выбора
 
         switch (choice) {
         case 1: { // Добавить лексему вручную
@@ -48,17 +50,22 @@ int main() {
             break;
         }
         case 4: { // Поиск лексемы по хеш-номеру
-            int value;
+            int hash, type;
+            std::cout << "Введите тип лексемы (30 - идентификатор, 40 - константа): ";
+            std::cin >> type;
             std::cout << "Введите значение хеша для поиска лексемы: ";
-            std::cin >> value;
-            std::cout << ht.findByHash(value) << "\n";
+            std::cin >> hash;
+            std::cout << ht.findByHash(hash, type) << "\n";
             break;
         }
         case 5: { // Поиск хеш-номера по значению
             std::string value;
+            int type;
+            std::cout << "Введите тип лексемы (30 - идентификатор, 40 - константа): ";
+            std::cin >> type;
             std::cout << "Введите значение лексемы для поиска его хеш-номера: ";
             std::cin >> value;
-            int hash = ht.findHashByValue(value);
+            int hash = ht.findHashByValue(value, type);
             if (hash != -1) {
                 std::cout << "Хеш-номер: " << hash << "\n";
             }
@@ -69,16 +76,22 @@ int main() {
         }
         case 6: { // Поиск лексемы в постоянной таблице по номеру
             size_t index;
+            int type;
+            std::cout << "Введите тип лексемы (10 - ключевое слово, 20 - разделитель): ";
+            std::cin >> type;
             std::cout << "Введите номер лексемы в постоянной таблице: ";
             std::cin >> index;
-            std::cout << ht.findByConstantTableIndex(index) << "\n";
+            std::cout << ht.findByConstantTableIndex(index, type) << "\n";
             break;
         }
         case 7: { // Поиск номера лексемы в постоянной таблице по имени
             std::string value;
+            int type;
+            std::cout << "Введите тип лексемы (10 - ключевое слово, 20 - разделитель): ";
+            std::cin >> type;
             std::cout << "Введите значение лексемы для поиска её номера: ";
             std::cin >> value;
-            int index = ht.findConstantTableIndexByValue(value);
+            int index = ht.findConstantTableIndexByValue(value, type);
             if (index != -1) {
                 std::cout << "Номер лексемы в постоянной таблице: " << index << "\n";
             }
@@ -103,7 +116,30 @@ int main() {
             std::cout << "Атрибут: " << ht.getAttribute(value) << "\n";
             break;
         }
-        case 10: { // Выход
+        case 10: { // Запуск сканера
+            std::string filename;
+            std::cout << "Введите имя файла для сканирования: ";
+            std::cin >> filename;
+
+            Scanner scanner(filename, ht); // Передаем ссылку на HashTable
+            if (scanner.scan()) {
+                std::cout << "Сканирование завершено успешно.\n";
+                std::cout << "Токены:\n";
+                for (const auto& token : scanner.getTokens()) {
+                    std::cout << "(" << token.tableType << ", " << token.index << ") "
+                        << "Значение: " << token.value
+                        << ", Строка: " << token.line << ", Столбец: " << token.column << "\n";
+                }
+            }
+            else {
+                std::cout << "Сканирование завершено с ошибками.\n";
+                for (const auto& error : scanner.getErrors()) {
+                    std::cout << error << "\n";
+                }
+            }
+            break;
+        }
+        case 11: { // Выход
             std::cout << "Выход из программы.\n";
             break;
         }
@@ -111,7 +147,7 @@ int main() {
             std::cout << "Неверный выбор. Попробуйте снова.\n";
         }
         }
-    } while (choice != 10);
+    } while (choice != 11);
 
     return 0;
 }

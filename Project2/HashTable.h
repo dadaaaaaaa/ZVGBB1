@@ -1,55 +1,52 @@
+#ifndef HASHTABLE_H
+#define HASHTABLE_H
+
+#include <string>
 #include <vector>
 #include <memory>
-#include <string>
-#include <fstream>
-#include <algorithm>
 #include <unordered_map>
-#include "Lexeme.h"
+#include "Lexeme.h" // Предполагается, что у вас есть класс Lexeme
 
 class HashTable {
 public:
-    HashTable(size_t size);
-    void insert(const Lexeme& lexeme); // Вставка лексемы
+    // Конструктор
+    HashTable();
+
+    // Методы для работы с таблицей
+    void insert(const Lexeme& lexeme);
     void display() const;
-
-    void addLexemeManually(); // Добавление лексемы вручную
-    std::string findByHash(int hash) const; // Поиск лексемы по хеш-номеру
-    int findHashByValue(const std::string& value) const; // Поиск хеш-номера по значению
-
-    // Работа с атрибутами
-    void addAttribute(const std::string& value, const std::string& attribute); // Добавление атрибута
-    std::string getAttribute(const std::string& value) const; // Получение атрибута
-
-    // Поиск лексемы во всех таблицах
+    void addLexemeManually();
+    void addLexeme(const std::string& value, int type);
+    std::string findByHash(int hash, int type) const;
+    int findHashByValue(const std::string& value, int type) const;
+    void addAttribute(const std::string& value, const std::string& attribute);
+    std::string getAttribute(const std::string& value) const;
     std::string searchInAllTables(const std::string& value) const;
+    std::string findByConstantTableIndex(size_t index, int type) const;
+    int findConstantTableIndexByValue(const std::string& value, int type) const;
 
-    // Статический метод для проверки ввода
+    // Загрузка и сохранение в файл
+    void loadFromFile(const std::string& filename, int type);
+    void saveToFile(const std::string& filename, int type) const;
     static int getValidatedInput(const std::string& prompt, int min, int max);
-
-    // Методы для работы с файлами
-    void loadFromFile(const std::string& filename, int type); // Загрузка данных из файла
-    void saveToFile(const std::string& filename, int type) const; // Сохранение данных в файл
-    // Поиск лексемы в постоянной таблице по номеру
-    std::string findByConstantTableIndex(size_t index) const;
-
-    // Поиск номера лексемы в постоянной таблице по имени
-    int findConstantTableIndexByValue(const std::string& value) const;
 private:
-    size_t hashFunction(const std::string& value) const;
-    size_t findNextFreeIndex(size_t index) const; // Поиск следующего свободного индекса
-
-    void sortConstantTable();
-    std::vector<std::unique_ptr<Lexeme>> variableTable; // Переменная таблица (40 константы и 30 идентификаторы)
-    std::vector<std::unique_ptr<Lexeme>> constantTable; // Постоянная таблица (20 разделители и 10 ключевые слова )
-
-    std::unordered_map<std::string, std::string> attributes; // Атрибуты лексем
-
-    // Метод для автоматического определения типа данных
+    // Вспомогательные методы
+   
+    size_t hashFunction(const std::string& value, size_t tableSize) const;
+    void rehash(std::vector<std::vector<std::unique_ptr<Lexeme>>>& table);
+    void sortTable(std::vector<std::unique_ptr<Lexeme>>& table);
     int determineDataType(const std::string& value) const;
-
-    // Метод для проверки и создания файла, если он не существует
     void ensureFileExists(const std::string& filename) const;
-
-    // Метод для проверки на повторение лексемы
     bool isLexemeExists(const std::string& value, int type) const;
+
+    // Таблицы
+    std::vector<std::vector<std::unique_ptr<Lexeme>>> identifierTable; // Таблица идентификаторов
+    std::vector<std::vector<std::unique_ptr<Lexeme>>> constantTable;   // Таблица констант
+    std::vector<std::unique_ptr<Lexeme>> keywordTable;                // Таблица ключевых слов
+    std::vector<std::unique_ptr<Lexeme>> delimiterTable;              // Таблица разделителей
+
+    // Атрибуты для лексем
+    std::unordered_map<std::string, std::string> attributes; // Хранение атрибутов лексем
 };
+
+#endif // HASHTABLE_H

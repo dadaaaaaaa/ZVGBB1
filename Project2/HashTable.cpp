@@ -2,8 +2,10 @@
 #include <iostream>
 #include <limits>
 #include <cctype>
+#include <algorithm>
+#include <fstream>
+#include <vector>
 
-// Реализация статического метода
 int HashTable::getValidatedInput(const std::string& prompt, int min, int max) {
     int value;
     while (true) {
@@ -21,30 +23,43 @@ int HashTable::getValidatedInput(const std::string& prompt, int min, int max) {
     return value;
 }
 
-HashTable::HashTable(size_t size) : variableTable(size), constantTable(size) {}
-
-size_t HashTable::hashFunction(const std::string& value) const {
-    return std::hash<std::string>{}(value) % variableTable.size();
+HashTable::HashTable() {
+    // Инициализация таблиц с начальным размером
+    identifierTable.resize(16); // Начальный размер таблицы идентификаторов
+    constantTable.resize(16);   // Начальный размер таблицы констант
 }
 
-size_t HashTable::findNextFreeIndex(size_t index) const {
-    while (variableTable[index] != nullptr) {
-        index = (index + 1) % variableTable.size();
+size_t HashTable::hashFunction(const std::string& value, size_t tableSize) const {
+    return std::hash<std::string>{}(value) % tableSize;
+}
+
+void HashTable::rehash(std::vector<std::vector<std::unique_ptr<Lexeme>>>& table) {
+    size_t newSize = table.size() * 2; // Увеличиваем размер таблицы в 2 раза
+    std::vector<std::vector<std::unique_ptr<Lexeme>>> newTable(newSize);
+
+    for (auto& bucket : table) { // Используем auto& для bucket
+        for (auto& lexeme : bucket) { // Используем auto& для lexeme
+            if (lexeme) { // Проверяем, что lexeme не nullptr
+                size_t index = hashFunction(lexeme->getValue(), newSize);
+                newTable[index].push_back(std::move(lexeme)); // Перемещаем lexeme
+            }
+        }
     }
-    return index;
+
+    table = std::move(newTable); // Перемещаем новую таблицу
 }
 
-void HashTable::sortConstantTable() {
+void HashTable::sortTable(std::vector<std::unique_ptr<Lexeme>>& table) {
     // Удаляем все nullptr из таблицы
-    constantTable.erase(
-        std::remove_if(constantTable.begin(), constantTable.end(),
+    table.erase(
+        std::remove_if(table.begin(), table.end(),
             [](const std::unique_ptr<Lexeme>& lexeme) {
                 return lexeme == nullptr;
             }),
-        constantTable.end());
+        table.end());
 
-    // Сортируем таблицу
-    std::sort(constantTable.begin(), constantTable.end(),
+    // Сортируем таблицу по значению лексем
+    std::sort(table.begin(), table.end(),
         [](const std::unique_ptr<Lexeme>& a, const std::unique_ptr<Lexeme>& b) {
             return a->getValue() < b->getValue();
         });
@@ -56,26 +71,38 @@ void HashTable::insert(const Lexeme& lexeme) {
         return;
     }
 
-    if (lexeme.getType() == 30 || lexeme.getType() == 40) { // Идентификаторы и константы
-        size_t index = hashFunction(lexeme.getValue());
+    if (lexeme.getType() == 30) { // Идентификаторы
+        size_t index = hashFunction(lexeme.getValue(), identifierTable.size());
+        identifierTable[index].push_back(std::make_unique<Lexeme>(lexeme));
 
-        // Если индекс занят, ищем следующий свободный
-        if (variableTable[index] != nullptr) {
-            index = findNextFreeIndex(index);
+        // Рехэширование, если таблица заполнена на 75%
+        if (identifierTable[index].size() > identifierTable.size() * 0.75) {
+            rehash(identifierTable);
         }
-
-        variableTable[index] = std::make_unique<Lexeme>(lexeme);
     }
-    else if (lexeme.getType() == 10 || lexeme.getType() == 20) { // Ключевые слова и разделители
-        constantTable.push_back(std::make_unique<Lexeme>(lexeme));
-        sortConstantTable(); // Сортируем таблицу после добавления
+    else if (lexeme.getType() == 40) { // Константы
+        size_t index = hashFunction(lexeme.getValue(), constantTable.size());
+        constantTable[index].push_back(std::make_unique<Lexeme>(lexeme));
+
+        // Рехэширование, если таблица заполнена на 75%
+        if (constantTable[index].size() > constantTable.size() * 0.75) {
+            rehash(constantTable);
+        }
+    }
+    else if (lexeme.getType() == 10) { // Ключевые слова
+        keywordTable.push_back(std::make_unique<Lexeme>(lexeme));
+        sortTable(keywordTable);
+    }
+    else if (lexeme.getType() == 20) { // Разделители
+        delimiterTable.push_back(std::make_unique<Lexeme>(lexeme));
+        sortTable(delimiterTable);
     }
     else {
         std::cerr << "Неверный тип лексемы: " << lexeme.getType() << "\n";
         return;
     }
 
-    // Сохраняем лексему в файл
+    // Сохранение в файл
     switch (lexeme.getType()) {
     case 10:
         saveToFile("keywords.txt", 10);
@@ -91,22 +118,40 @@ void HashTable::insert(const Lexeme& lexeme) {
         break;
     }
 }
+
 void HashTable::display() const {
-    std::cout << "=== Переменная таблица ===\n";
-    for (size_t i = 0; i < variableTable.size(); ++i) {
-        if (variableTable[i] != nullptr) {
-            const auto& lexeme = *variableTable[i];
-            std::cout << "Хеш: " << i << "\tИмя: " << lexeme.getValue()
-                << "\tТип: " << lexeme.getDataType()
-                << "\tЗначение: " << (lexeme.isDefined() ? "Определено" : "Не определено") << "\n";
+    std::cout << "=== Таблица идентификаторов ===\n";
+    for (size_t i = 0; i < identifierTable.size(); ++i) {
+        for (const auto& lexeme : identifierTable[i]) {
+            std::cout << "Хеш: " << i << "\tИмя: " << lexeme->getValue()
+                << "\tТип: " << lexeme->getDataType()
+                << "\tЗначение: " << (lexeme->isDefined() ? "Определено" : "Не определено") << "\n";
         }
     }
 
-    std::cout << "=== Постоянная таблица ===\n";
+    std::cout << "=== Таблица констант ===\n";
     for (size_t i = 0; i < constantTable.size(); ++i) {
-        if (constantTable[i] != nullptr) {
-            const auto& lexeme = *constantTable[i];
-            std::cout << "Номер: " << i << "\tКонстанта: " << lexeme.getValue()
+        for (const auto& lexeme : constantTable[i]) {
+            std::cout << "Хеш: " << i << "\tИмя: " << lexeme->getValue()
+                << "\tТип: " << lexeme->getDataType()
+                << "\tЗначение: " << (lexeme->isDefined() ? "Определено" : "Не определено") << "\n";
+        }
+    }
+
+    std::cout << "=== Таблица ключевых слов ===\n";
+    for (size_t i = 0; i < keywordTable.size(); ++i) {
+        if (keywordTable[i] != nullptr) {
+            const auto& lexeme = *keywordTable[i];
+            std::cout << "Номер: " << i << "\tКлючевое слово: " << lexeme.getValue()
+                << "\tТип: " << lexeme.getDataType() << "\n";
+        }
+    }
+
+    std::cout << "=== Таблица разделителей ===\n";
+    for (size_t i = 0; i < delimiterTable.size(); ++i) {
+        if (delimiterTable[i] != nullptr) {
+            const auto& lexeme = *delimiterTable[i];
+            std::cout << "Номер: " << i << "\tРазделитель: " << lexeme.getValue()
                 << "\tТип: " << lexeme.getDataType() << "\n";
         }
     }
@@ -134,17 +179,36 @@ void HashTable::ensureFileExists(const std::string& filename) const {
         }
     }
 }
+
 bool HashTable::isLexemeExists(const std::string& value, int type) const {
-    if (type == 30 || type == 40) { // Идентификаторы и константы
-        for (size_t i = 0; i < variableTable.size(); ++i) {
-            if (variableTable[i] != nullptr && variableTable[i]->getValue() == value) {
+    if (type == 30) { // Идентификаторы
+        for (const auto& bucket : identifierTable) {
+            for (const auto& lexeme : bucket) {
+                if (lexeme->getValue() == value) {
+                    return true;
+                }
+            }
+        }
+    }
+    else if (type == 40) { // Константы
+        for (const auto& bucket : constantTable) {
+            for (const auto& lexeme : bucket) {
+                if (lexeme->getValue() == value) {
+                    return true;
+                }
+            }
+        }
+    }
+    else if (type == 10) { // Ключевые слова
+        for (const auto& lexeme : keywordTable) {
+            if (lexeme->getValue() == value) {
                 return true;
             }
         }
     }
-    else if (type == 10 || type == 20) { // Ключевые слова и разделители
-        for (size_t i = 0; i < constantTable.size(); ++i) {
-            if (constantTable[i] != nullptr && constantTable[i]->getValue() == value) {
+    else if (type == 20) { // Разделители
+        for (const auto& lexeme : delimiterTable) {
+            if (lexeme->getValue() == value) {
                 return true;
             }
         }
@@ -160,7 +224,7 @@ void HashTable::loadFromFile(const std::string& filename, int type) {
         std::string value;
         while (file >> value) {
             int dataType = determineDataType(value);
-            insert(Lexeme(value, type, dataType, 1)); // Значение "определено"
+            insert(Lexeme(value, type, dataType, 1));
         }
         file.close();
     }
@@ -174,18 +238,28 @@ void HashTable::saveToFile(const std::string& filename, int type) const {
 
     std::ofstream file(filename);
     if (file.is_open()) {
-        if (type == 40 || type == 30) { // Переменная таблица
-            for (size_t i = 0; i < variableTable.size(); ++i) {
-                if (variableTable[i] != nullptr && variableTable[i]->getType() == type) {
-                    file << variableTable[i]->getValue() << "\n";
+        if (type == 30) { // Идентификаторы
+            for (const auto& bucket : identifierTable) {
+                for (const auto& lexeme : bucket) {
+                    file << lexeme->getValue() << "\n";
                 }
             }
         }
-        else { // Постоянная таблица
-            for (size_t i = 0; i < constantTable.size(); ++i) {
-                if (constantTable[i] != nullptr && constantTable[i]->getType() == type) {
-                    file << constantTable[i]->getValue() << "\n";
+        else if (type == 40) { // Константы
+            for (const auto& bucket : constantTable) {
+                for (const auto& lexeme : bucket) {
+                    file << lexeme->getValue() << "\n";
                 }
+            }
+        }
+        else if (type == 10) { // Ключевые слова
+            for (const auto& lexeme : keywordTable) {
+                file << lexeme->getValue() << "\n";
+            }
+        }
+        else if (type == 20) { // Разделители
+            for (const auto& lexeme : delimiterTable) {
+                file << lexeme->getValue() << "\n";
             }
         }
         file.close();
@@ -199,7 +273,6 @@ void HashTable::addLexemeManually() {
     std::string value;
     int type;
 
-    // Ввод значения лексемы
     while (true) {
         std::cout << "Введите значение лексемы (максимум 10 символов): ";
         std::cin >> value;
@@ -212,51 +285,78 @@ void HashTable::addLexemeManually() {
         }
     }
 
-    // Ввод типа лексемы
     while (true) {
         type = getValidatedInput(
-            "Введите тип лексемы (30 - идентификатор, 40 - константа): ",
-            30, 40);
+            "Введите тип лексемы (30 - идентификатор, 40 - константа, 10 - ключевое слово, 20 - разделитель): ",
+            10, 40);
 
-        if ( type == 30 || type == 40) {
+        if (type == 10 || type == 20 || type == 30 || type == 40) {
             break;
         }
         else {
-            std::cerr << "Ошибка! Введите допустимый тип лексемы (30, 40).\n";
+            std::cerr << "Ошибка! Введите допустимый тип лексемы (10, 20, 30, 40).\n";
         }
     }
 
-    // Определение типа данных
     int dataType = determineDataType(value);
-
-    // Создание и добавление лексемы
-    Lexeme lexeme(value, type, dataType, 1); // Значение "определено"
+    Lexeme lexeme(value, type, dataType, 1);
     insert(lexeme);
 
     std::cout << "Лексема добавлена и сохранена в файл.\n";
 }
-std::string HashTable::findByHash(int hash) const {
-    if (hash < 0 || hash >= variableTable.size()) {
-        return "Ошибка: неверный хеш-номер!";
-    }
 
-    if (variableTable[hash] != nullptr) {
-        return variableTable[hash]->getValue();
-    }
+void HashTable::addLexeme(const std::string& value, int type) {
+    int dataType = determineDataType(value);
+    Lexeme lexeme(value, type, dataType, 1);
+    insert(lexeme);
 
+    std::cout << "Лексема '" << value << "' добавлена и сохранена в файл.\n";
+}
+
+std::string HashTable::findByHash(int hash, int type) const {
+    if (type == 30) { // Идентификаторы
+        if (hash < 0 || hash >= identifierTable.size()) {
+            return "Ошибка: неверный хеш-номер!";
+        }
+        for (const auto& lexeme : identifierTable[hash]) {
+            return lexeme->getValue();
+        }
+    }
+    else if (type == 40) { // Константы
+        if (hash < 0 || hash >= constantTable.size()) {
+            return "Ошибка: неверный хеш-номер!";
+        }
+        for (const auto& lexeme : constantTable[hash]) {
+            return lexeme->getValue();
+        }
+    }
     return "Лексема не найдена!";
 }
 
-int HashTable::findHashByValue(const std::string& value) const {
-    for (size_t i = 0; i < variableTable.size(); ++i) {
-        if (variableTable[i] != nullptr && variableTable[i]->getValue() == value) {
-            return static_cast<int>(i);
+int HashTable::findHashByValue(const std::string& value, int type) const {
+    if (type == 30) { // Идентификаторы
+        for (size_t i = 0; i < identifierTable.size(); ++i) {
+            for (const auto& lexeme : identifierTable[i]) {
+                if (lexeme->getValue() == value) {
+                    return static_cast<int>(i);
+                }
+            }
         }
     }
-
+    else if (type == 40) { // Константы
+        for (size_t i = 0; i < constantTable.size(); ++i) {
+            for (const auto& lexeme : constantTable[i]) {
+                if (lexeme->getValue() == value) {
+                    return static_cast<int>(i);
+                }
+            }
+        }
+    }
     return -1;
-}void HashTable::addAttribute(const std::string& value, const std::string& attribute) {
-    if (isLexemeExists(value, 30)) { // Проверяем, существует ли лексема
+}
+
+void HashTable::addAttribute(const std::string& value, const std::string& attribute) {
+    if (isLexemeExists(value, 30)) {
         attributes[value] = attribute;
         std::cout << "Атрибут добавлен к лексеме '" << value << "'.\n";
     }
@@ -272,38 +372,71 @@ std::string HashTable::getAttribute(const std::string& value) const {
     }
     return "Атрибут не найден!";
 }
-std::string HashTable::searchInAllTables(const std::string& value) const {
-    // Поиск в постоянной таблице (бинарный поиск)
-    auto it = std::lower_bound(constantTable.begin(), constantTable.end(), value,
-        [](const std::unique_ptr<Lexeme>& a, const std::string& b) {
-            return a->getValue() < b;
-        });
 
-    if (it != constantTable.end() && (*it)->getValue() == value) {
-        size_t index = std::distance(constantTable.begin(), it);
-        return "Лексема найдена в постоянной таблице. Номер: " + std::to_string(index);
+std::string HashTable::searchInAllTables(const std::string& value) const {
+    // Поиск в таблице идентификаторов
+    for (size_t i = 0; i < identifierTable.size(); ++i) {
+        for (const auto& lexeme : identifierTable[i]) {
+            if (lexeme->getValue() == value) {
+                return "Лексема найдена в таблице идентификаторов. Хеш: " + std::to_string(i);
+            }
+        }
     }
 
-    // Поиск в переменной таблице
-    int hash = findHashByValue(value);
-    if (hash != -1) {
-        return "Лексема найдена в переменной таблице. Хеш: " + std::to_string(hash);
+    // Поиск в таблице констант
+    for (size_t i = 0; i < constantTable.size(); ++i) {
+        for (const auto& lexeme : constantTable[i]) {
+            if (lexeme->getValue() == value) {
+                return "Лексема найдена в таблице констант. Хеш: " + std::to_string(i);
+            }
+        }
+    }
+
+    // Поиск в таблице ключевых слов
+    for (size_t i = 0; i < keywordTable.size(); ++i) {
+        if (keywordTable[i] != nullptr && keywordTable[i]->getValue() == value) {
+            return "Лексема найдена в таблице ключевых слов. Номер: " + std::to_string(i);
+        }
+    }
+
+    // Поиск в таблице разделителей
+    for (size_t i = 0; i < delimiterTable.size(); ++i) {
+        if (delimiterTable[i] != nullptr && delimiterTable[i]->getValue() == value) {
+            return "Лексема найдена в таблице разделителей. Номер: " + std::to_string(i);
+        }
     }
 
     return "Лексема не найдена ни в одной из таблиц.";
 }
-std::string HashTable::findByConstantTableIndex(size_t index) const {
-    if (index < constantTable.size() && constantTable[index] != nullptr) {
-        return "Лексема найдена в постоянной таблице. Значение: " + constantTable[index]->getValue();
+
+std::string HashTable::findByConstantTableIndex(size_t index, int type) const {
+    if (type == 10) { // Ключевые слова
+        if (index < keywordTable.size() && keywordTable[index] != nullptr) {
+            return "Лексема найдена в таблице ключевых слов. Значение: " + keywordTable[index]->getValue();
+        }
+    }
+    else if (type == 20) { // Разделители
+        if (index < delimiterTable.size() && delimiterTable[index] != nullptr) {
+            return "Лексема найдена в таблице разделителей. Значение: " + delimiterTable[index]->getValue();
+        }
     }
     return "Лексема не найдена в постоянной таблице.";
 }
 
-int HashTable::findConstantTableIndexByValue(const std::string& value) const {
-    for (size_t i = 0; i < constantTable.size(); ++i) {
-        if (constantTable[i] && constantTable[i]->getValue() == value) {
-            return static_cast<int>(i);
+int HashTable::findConstantTableIndexByValue(const std::string& value, int type) const {
+    if (type == 10) { // Ключевые слова
+        for (size_t i = 0; i < keywordTable.size(); ++i) {
+            if (keywordTable[i] != nullptr && keywordTable[i]->getValue() == value) {
+                return static_cast<int>(i);
+            }
         }
     }
-    return -1; // Если лексема не найдена
+    else if (type == 20) { // Разделители
+        for (size_t i = 0; i < delimiterTable.size(); ++i) {
+            if (delimiterTable[i] != nullptr && delimiterTable[i]->getValue() == value) {
+                return static_cast<int>(i);
+            }
+        }
+    }
+    return -1;
 }

@@ -1,5 +1,6 @@
-Begin
-End
-New
-Program
-Root
+break
+continue
+do
+else
+if
+while

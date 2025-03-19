@@ -1,6 +1,8 @@
-break
-While
-Continue
-else
-if
-do
+-10
+new
+10
+root
+ad
+end
+program
+begin
