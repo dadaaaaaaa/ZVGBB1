@@ -145,7 +145,7 @@ int Scanner::levenshteinDistance(const std::string& s1, const std::string& s2) c
     return d[len1][len2];
 }
 
-bool Scanner::isKeyword(const std::string& value)  {
+bool Scanner::isKeyword(const std::string& value) {
     const std::vector<std::string> keywords = { "while", "break", "continue", "if", "else" };
 
     // Проверяем точное совпадение
@@ -153,25 +153,31 @@ bool Scanner::isKeyword(const std::string& value)  {
         return true;
     }
 
-    // Определяем порог расстояния в зависимости от длины строки
-    int threshold = (value.length() <= 2) ? 1 : 2;
-
-    // Проверяем возможные опечатки
+    // Проверяем возможные опечатки (отличие на 1 символ)
     for (const auto& keyword : keywords) {
-        // Проверка на опечатки по расстоянию Левенштейна
-        if (levenshteinDistance(value, keyword) <= threshold) {
-            errors.push_back("Ошибка: возможная опечатка в ключевом слове '" + value + "'. Возможно, вы имели в виду '" + keyword + "'.");
+        if (value.length() != keyword.length()) {
+            continue; // Длина должна совпадать
         }
 
-        // Проверка на совпадение букв
-        if (hasSameCharacters(value, keyword)) {
-            errors.push_back("Ошибка: возможная опечатка в ключевом слове '" + value + "'. Возможно, вы имели в виду '" + keyword + "'.");            return false;
+        int diffCount = 0;
+        for (size_t i = 0; i < value.length(); ++i) {
+            if (value[i] != keyword[i]) {
+                diffCount++;
+                if (diffCount > 1) {
+                    break; // Превышено допустимое отличие
+                }
+            }
+        }
+
+        if (diffCount == 1) {
+            errors.push_back("Ошибка: возможная опечатка в ключевом слове '" +
+                value + "'. Возможно, вы имели в виду '" + keyword + "'.");
+            return false;
         }
     }
 
     return false;
 }
-
 bool Scanner::hasSameCharacters(const std::string& s1, const std::string& s2) const {
     if (s1.length() != s2.length()) {
         return false;
