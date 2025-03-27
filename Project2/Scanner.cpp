@@ -206,7 +206,6 @@ char Scanner::peekNextChar() {
     return ch;
 }
 
-// Остальные методы класса Scanner...// Остальные методы класса Scanner...
 
 void Scanner::saveErrorsToFile(const std::string& filename) const {
     std::ofstream errorFile(filename);
