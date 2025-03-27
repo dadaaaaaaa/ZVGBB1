@@ -144,7 +144,6 @@ int Scanner::levenshteinDistance(const std::string& s1, const std::string& s2) c
 
     return d[len1][len2];
 }
-
 bool Scanner::isKeyword(const std::string& value) {
     const std::vector<std::string> keywords = { "while", "break", "continue", "if", "else" };
 
@@ -153,26 +152,44 @@ bool Scanner::isKeyword(const std::string& value) {
         return true;
     }
 
-    // Проверяем возможные опечатки (отличие на 1 символ)
+    // Проверяем возможные опечатки (отличие на 1 символ или перестановка)
     for (const auto& keyword : keywords) {
         if (value.length() != keyword.length()) {
-            continue; // Длина должна совпадать
+            continue;
         }
 
         int diffCount = 0;
+        int firstDiffPos = -1;
+        int secondDiffPos = -1;
+
+        // Сначала считаем различия
         for (size_t i = 0; i < value.length(); ++i) {
             if (value[i] != keyword[i]) {
-                diffCount++;
-                if (diffCount > 1) {
-                    break; // Превышено допустимое отличие
+                if (firstDiffPos == -1) {
+                    firstDiffPos = i;
                 }
+                else {
+                    secondDiffPos = i;
+                }
+                diffCount++;
             }
         }
 
+        // Если разница в 1 символ - явная опечатка
         if (diffCount == 1) {
             errors.push_back("Ошибка: возможная опечатка в ключевом слове '" +
                 value + "'. Возможно, вы имели в виду '" + keyword + "'.");
             return false;
+        }
+
+        // Если разница в 2 символа - проверяем перестановку
+        if (diffCount == 2 && firstDiffPos != -1 && secondDiffPos != -1) {
+            if (value[firstDiffPos] == keyword[secondDiffPos] &&
+                value[secondDiffPos] == keyword[firstDiffPos]) {
+                errors.push_back("Ошибка: возможная перестановка символов в ключевом слове '" +
+                    value + "'. Возможно, вы имели в виду '" + keyword + "'.");
+                return false;
+            }
         }
     }
 
