@@ -6,6 +6,8 @@
 #include <vector>
 #include <algorithm>
 #include <stack>
+#include <fstream> // Для работы с файлами
+#include <iostream> // Для вывода ошибок
 
 // Конструктор
 Scanner::Scanner(const std::string& filename, HashTable& hashTable)
@@ -93,6 +95,7 @@ bool Scanner::scan() {
             else if (isValidIdentifier(buffer)) {
                 int index = hashTable.findHashByValue(buffer, TABLE_IDENTIFIERS);
                 token = createToken(buffer, TABLE_IDENTIFIERS, index);
+
             }
             // Проверка, является ли токен константой
             else if (isValidConstant(buffer)) {
@@ -313,6 +316,11 @@ void Scanner::ungetChar() {
     if (columnNumber > 0) {
         columnNumber--;
     }
+}
+
+// Проверить, является ли токен ключевым словом
+bool Scanner::isKeyword(const std::string& value) const {
+    return hashTable.findConstantTableIndexByValue(value, TABLE_KEYWORDS) != -1;
 }
 
 // Проверить, является ли символ разделителем

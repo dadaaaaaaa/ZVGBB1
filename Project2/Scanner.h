@@ -52,18 +52,7 @@ private:
         STATE_DELIMITER,    // Разделитель
         STATE_ERROR         // Ошибка
     };
-
-    bool hasSameCharacters(const std::string& s1, const std::string& s2) const;
-    void saveErrorsToFile(const std::string& filename) const; // Сохранить ошибки в файл
-    void saveTokensToFile(const std::string& filename) const; // Сохранить токены в файл
-    char peekNextChar(); // Просмотреть следующий символ
-    bool isValidIdentifier(const std::string& identifier) const; // Проверить идентификатор
-    bool isValidConstant(const std::string& constant) const; // Проверить константу
-    char getNextChar(); // Получить следующий символ
-    void ungetChar(); // Вернуть символ обратно в поток
     Token createToken(const std::string& value, int tableType, int index) const; // Создать токен
-    bool isKeyword(const std::string& value) ; // Проверить, является ли токен ключевым словом
-    bool isDelimiter(const std::string& ch) const; // Проверить, является ли символ разделителем
 };
 
 #endif // SCANNER_H
