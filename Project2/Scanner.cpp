@@ -195,6 +195,7 @@ bool Scanner::isKeyword(const std::string& value) {
 
     return false;
 }
+
 bool Scanner::hasSameCharacters(const std::string& s1, const std::string& s2) const {
     if (s1.length() != s2.length()) {
         return false;
