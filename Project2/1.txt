@@ -1,0 +1,7 @@
+whili ( a + b = c){ 
+if  a = c )
+retern b ; /* b=0 */
+else 
+return a ; /* b != 
+}
+// ghjuhfvvf [p xtuj]

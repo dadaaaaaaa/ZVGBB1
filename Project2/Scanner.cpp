@@ -1,4 +1,4 @@
-#include "Scanner.h"
+п»ї#include "Scanner.h"
 #include <cctype>
 #include <sstream>
 #include <fstream>
@@ -6,14 +6,12 @@
 #include <vector>
 #include <algorithm>
 #include <stack>
-#include <fstream> // Для работы с файлами
-#include <iostream> // Для вывода ошибок
 
-// Конструктор
+// РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ
 Scanner::Scanner(const std::string& filename, HashTable& hashTable)
     : file(filename), hashTable(hashTable), lineNumber(1), columnNumber(0) {
     if (!file.is_open()) {
-        errors.push_back("Ошибка: не удалось открыть файл " + filename);
+        errors.push_back("РћС€РёР±РєР°: РЅРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ С„Р°Р№Р» " + filename);
     }
 }
 
@@ -23,104 +21,173 @@ bool Scanner::scan() {
     }
 
     char ch;
-    bool inString = false; // Флаг для отслеживания строковых литералов
-    while ((ch = getNextChar()) != EOF) {
-        std::string buffer;
-        int startLine = lineNumber;
-        int startColumn = columnNumber;
+    bool inString = false;
+    bool inSingleLineComment = false;
+    bool inMultiLineComment = false;
+    int multiLineCommentStartLine = 0;
+    int stringStartLine = 0;
 
-        // Обработка строковых литералов
-        if (ch == '"') {
-            inString = !inString; // Переключаем флаг
-            if (!inString) { // Если строка закрыта
+    // Р”Р»СЏ РѕС‚СЃР»РµР¶РёРІР°РЅРёСЏ СЃРєРѕР±РѕРє
+    struct {
+        int round = 0;    // ()
+        int curly = 0;     // {}
+        int square = 0;    // []
+        int lastRoundLine = 0;
+        int lastCurlyLine = 0;
+        int lastSquareLine = 0;
+    } brackets;
+
+    while ((ch = getNextChar()) != EOF) {
+        int currentLine = lineNumber;
+
+        if (ch == '\n') {
+            inSingleLineComment = false;
+            continue;
+        }
+
+        if (!inString && !inSingleLineComment && !inMultiLineComment && isspace(ch)) {
+            continue;
+        }
+
+        if (ch == '"' && !inSingleLineComment && !inMultiLineComment) {
+            inString = !inString;
+            if (inString) stringStartLine = currentLine;
+            continue;
+        }
+
+        // РћР±СЂР°Р±РѕС‚РєР° РєРѕРјРјРµРЅС‚Р°СЂРёРµРІ
+        if (!inString) {
+            if (ch == '/' && peekNextChar() == '/') {
+                inSingleLineComment = true;
+                getNextChar();
+                continue;
+            }
+            if (ch == '/' && peekNextChar() == '*') {
+                inMultiLineComment = true;
+                multiLineCommentStartLine = currentLine;
+                getNextChar();
+                continue;
+            }
+            if (inMultiLineComment && ch == '*' && peekNextChar() == '/') {
+                inMultiLineComment = false;
+                getNextChar();
                 continue;
             }
         }
 
-        // Пропуск комментариев /* ... */
-        if (ch == '/' && peekNextChar() == '*') {
-            getNextChar(); // Пропускаем '*'
-            while ((ch = getNextChar()) != EOF) {
-                if (ch == '*' && peekNextChar() == '/') {
-                    getNextChar(); // Пропускаем '/'
-                    break;
+        if (inString || inSingleLineComment || inMultiLineComment) {
+            continue;
+        }
+
+        // РћР±СЂР°Р±РѕС‚РєР° СЃРєРѕР±РѕРє
+        switch (ch) {
+        case '(':
+            brackets.round++;
+            brackets.lastRoundLine = currentLine;
+            break;
+        case ')':
+            if (brackets.round <= 0) {
+                errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(currentLine) +
+                    ": Р»РёС€РЅСЏСЏ Р·Р°РєСЂС‹РІР°СЋС‰Р°СЏ СЃРєРѕР±РєР° ')'");
+            }
+            else {
+                brackets.round--;
+            }
+            break;
+        case '{':
+            brackets.curly++;
+            brackets.lastCurlyLine = currentLine;
+            break;
+        case '}':
+            if (brackets.curly <= 0) {
+                errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(currentLine) +
+                    ": Р»РёС€РЅСЏСЏ Р·Р°РєСЂС‹РІР°СЋС‰Р°СЏ СЃРєРѕР±РєР° '}'");
+            }
+            else {
+                brackets.curly--;
+            }
+            break;
+        case '[':
+            brackets.square++;
+            brackets.lastSquareLine = currentLine;
+            break;
+        case ']':
+            if (brackets.square <= 0) {
+                errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(currentLine) +
+                    ": Р»РёС€РЅСЏСЏ Р·Р°РєСЂС‹РІР°СЋС‰Р°СЏ СЃРєРѕР±РєР° ']'");
+            }
+            else {
+                brackets.square--;
+            }
+            break;
+        }
+
+        // РћР±СЂР°Р±РѕС‚РєР° С‚РѕРєРµРЅРѕРІ
+        if (!inString && !inSingleLineComment && !inMultiLineComment) {
+            std::string buffer;
+            buffer += ch;
+
+            char nextCh = peekNextChar();
+            while (nextCh != EOF && !isspace(nextCh) &&
+                !isDelimiter(std::string(1, nextCh))) {
+                buffer += getNextChar();
+                nextCh = peekNextChar();
+            }
+
+            if (!buffer.empty()) {
+                Token token;
+                if (isDelimiter(buffer)) {
+                    int index = hashTable.findConstantTableIndexByValue(buffer, TABLE_DELIMITERS);
+                    token = createToken(buffer, TABLE_DELIMITERS, index);
                 }
+                else if (isKeyword(buffer)) {
+                    int index = hashTable.findConstantTableIndexByValue(buffer, TABLE_KEYWORDS);
+                    token = createToken(buffer, TABLE_KEYWORDS, index);
+                }
+                else if (isValidIdentifier(buffer)) {
+                    int index = hashTable.findHashByValue(buffer, TABLE_IDENTIFIERS);
+                    token = createToken(buffer, TABLE_IDENTIFIERS, index);
+                }
+                else if (isValidConstant(buffer)) {
+                    int index = hashTable.findHashByValue(buffer, TABLE_CONSTANTS);
+                    token = createToken(buffer, TABLE_CONSTANTS, index);
+                }
+                else {
+                    errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(currentLine) +
+                        ": С‚РѕРєРµРЅ '" + buffer + "' РЅРµ СЂР°СЃРїРѕР·РЅР°РЅ");
+                    token = createToken(buffer, -1, -1);
+                }
+                tokens.push_back(token);
             }
-            if (ch == EOF) {
-                errors.push_back("Ошибка: комментарий /* не закрыт.");
-            }
-            continue;
-        }
-
-        // Пропуск однострочных комментариев //
-        if (ch == '/' && peekNextChar() == '/') {
-            while ((ch = getNextChar()) != EOF && ch != '\n') {}
-            continue;
-        }
-
-        // Обработка скобок
-        if (ch == '{' || ch == '[' || ch == '(' || ch == '"') {
-            bracketStack.push(ch);
-        }
-        else if (ch == '}' || ch == ']' || ch == ')' || ch == '"') {
-            if (bracketStack.empty() || !isMatchingBracket(bracketStack.top(), ch)) {
-                errors.push_back("Ошибка: неправильная закрывающая скобка '" + std::string(1, ch) + "' в строке " + std::to_string(lineNumber));
-            }
-            else {
-                bracketStack.pop();
-            }
-        }
-
-        // Считываем символы до пробела или конца строки
-        while (ch != EOF && !std::isspace(ch)) {
-            buffer += ch; // Добавляем символ в буфер
-            ch = getNextChar(); // Считываем следующий символ
-        }
-
-        // Обработка токенов после завершения считывания слова
-        if (!buffer.empty()) {
-            Token token;
-
-            // Проверка, является ли токен разделителем
-            if (isDelimiter(buffer)) {
-                int index = hashTable.findConstantTableIndexByValue(buffer, TABLE_DELIMITERS);
-                token = createToken(buffer, TABLE_DELIMITERS, index);
-            }
-            // Проверка, является ли токен ключевым словом
-            else if (isKeyword(buffer)) {
-                int index = hashTable.findConstantTableIndexByValue(buffer, TABLE_KEYWORDS);
-                token = createToken(buffer, TABLE_KEYWORDS, index);
-            }
-            // Проверка, является ли токен идентификатором
-            else if (isValidIdentifier(buffer)) {
-                int index = hashTable.findHashByValue(buffer, TABLE_IDENTIFIERS);
-                token = createToken(buffer, TABLE_IDENTIFIERS, index);
-
-            }
-            // Проверка, является ли токен константой
-            else if (isValidConstant(buffer)) {
-                int index = hashTable.findHashByValue(buffer, TABLE_CONSTANTS);
-                token = createToken(buffer, TABLE_CONSTANTS, index);
-            }
-            // Если токен не распознан
-            else {
-                errors.push_back("Ошибка: токен '" + buffer + "' не распознан.");
-                token = createToken(buffer, -1, -1); // Ошибка
-            }
-
-            tokens.push_back(token);
         }
     }
 
-  
-
-    // Проверка на незакрытые скобки
-    while (!bracketStack.empty()) {
-        errors.push_back("Ошибка: незакрытая скобка '" + std::string(1, bracketStack.top()) + "'");
-        bracketStack.pop(); // Удаляем все незакрытые скобки из стека
+    // Р¤РёРЅР°Р»СЊРЅС‹Рµ РїСЂРѕРІРµСЂРєРё
+    if (inString) {
+        errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(stringStartLine) +
+            ": РЅРµР·Р°РєСЂС‹С‚Р°СЏ СЃС‚СЂРѕРєРѕРІР°СЏ РєР°РІС‹С‡РєР° \"");
     }
 
-    // Сначала проверяем на ошибки, затем сохраняем
+    if (inMultiLineComment) {
+        errors.push_back("РћС€РёР±РєР° РІ СЃС‚СЂРѕРєРµ " + std::to_string(multiLineCommentStartLine) +
+            ": РЅРµР·Р°РєСЂС‹С‚С‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№ /*");
+    }
+
+    // РџСЂРѕРІРµСЂРєР° РЅРµР·Р°РєСЂС‹С‚С‹С… СЃРєРѕР±РѕРє
+    if (brackets.round > 0) {
+        errors.push_back("РћС€РёР±РєР°: РЅРµР·Р°РєСЂС‹С‚Р°СЏ РєСЂСѓРіР»Р°СЏ СЃРєРѕР±РєР° '(' РёР· СЃС‚СЂРѕРєРё " +
+            std::to_string(brackets.lastRoundLine));
+    }
+    if (brackets.curly > 0) {
+        errors.push_back("РћС€РёР±РєР°: РЅРµР·Р°РєСЂС‹С‚Р°СЏ С„РёРіСѓСЂРЅР°СЏ СЃРєРѕР±РєР° '{' РёР· СЃС‚СЂРѕРєРё " +
+            std::to_string(brackets.lastCurlyLine));
+    }
+    if (brackets.square > 0) {
+        errors.push_back("РћС€РёР±РєР°: РЅРµР·Р°РєСЂС‹С‚Р°СЏ РєРІР°РґСЂР°С‚РЅР°СЏ СЃРєРѕР±РєР° '[' РёР· СЃС‚СЂРѕРєРё " +
+            std::to_string(brackets.lastSquareLine));
+    }
+
+    // РЎРѕС…СЂР°РЅРµРЅРёРµ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
     if (!errors.empty()) {
         saveErrorsToFile("errors.txt");
     }
@@ -131,41 +198,25 @@ bool Scanner::scan() {
     return errors.empty();
 }
 
-
-// Функция для вычисления расстояния Левенштейна
-int Scanner::levenshteinDistance(const std::string& s1, const std::string& s2) const {
-    const std::size_t len1 = s1.size(), len2 = s2.size();
-    std::vector<std::vector<int>> d(len1 + 1, std::vector<int>(len2 + 1));
-
-    d[0][0] = 0;
-    for (std::size_t i = 1; i <= len1; ++i) d[i][0] = i;
-    for (std::size_t i = 1; i <= len2; ++i) d[0][i] = i;
-
-    for (std::size_t i = 1; i <= len1; ++i)
-        for (std::size_t j = 1; j <= len2; ++j)
-            d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
-
-    return d[len1][len2];
-}
 bool Scanner::isKeyword(const std::string& value) {
-    const std::vector<std::string> keywords = { "while", "break", "continue", "if", "else" };
-
-    // Проверяем точное совпадение
+    // 1. РџСЂРѕРІРµСЂСЏРµРј С‚РѕС‡РЅРѕРµ СЃРѕРІРїР°РґРµРЅРёРµ С‡РµСЂРµР· С…РµС€-С‚Р°Р±Р»РёС†Сѓ
     if (hashTable.findConstantTableIndexByValue(value, TABLE_KEYWORDS) != -1) {
-        return true;
+        return true; // Р­С‚Рѕ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ
     }
 
-    // Проверяем возможные опечатки (отличие на 1 символ или перестановка)
+    // 2. РџСЂРѕРІРµСЂРєР° РЅР° РѕРїРµС‡Р°С‚РєРё (РµСЃР»Рё РЅРµ РЅР°С€Р»Рё С‚РѕС‡РЅРѕРµ СЃРѕРІРїР°РґРµРЅРёРµ)
+    const auto& keywords = hashTable.getKeywordTableValues();
+
     for (const auto& keyword : keywords) {
         if (value.length() != keyword.length()) {
-            continue;
+            continue; // Р”Р»РёРЅС‹ СЂР°Р·РЅС‹Рµ в†’ РїСЂРѕРїСѓСЃРєР°РµРј
         }
 
+        // РЎС‡РёС‚Р°РµРј СЂР°Р·Р»РёС‡РёСЏ РјРµР¶РґСѓ value Рё keyword
         int diffCount = 0;
         int firstDiffPos = -1;
         int secondDiffPos = -1;
 
-        // Сначала считаем различия
         for (size_t i = 0; i < value.length(); ++i) {
             if (value[i] != keyword[i]) {
                 if (firstDiffPos == -1) {
@@ -178,56 +229,32 @@ bool Scanner::isKeyword(const std::string& value) {
             }
         }
 
-        // Если разница в 1 символ - явная опечатка
+        // Р•СЃР»Рё СЂР°Р·РЅРёС†Р° РІ 1 СЃРёРјРІРѕР» в†’ РѕРїРµС‡Р°С‚РєР°
         if (diffCount == 1) {
-            errors.push_back("Ошибка: возможная опечатка в ключевом слове '" +
-                value + "'. Возможно, вы имели в виду '" + keyword + "'.");
+            errors.push_back(
+                "РћС€РёР±РєР°: РІРѕР·РјРѕР¶РЅР°СЏ РѕРїРµС‡Р°С‚РєР° РІ РєР»СЋС‡РµРІРѕРј СЃР»РѕРІРµ '" + value +
+                "'. Р’РѕР·РјРѕР¶РЅРѕ, РІС‹ РёРјРµР»Рё РІ РІРёРґСѓ '" + keyword + "'."
+            );
             return false;
         }
 
-        // Если разница в 2 символа - проверяем перестановку
+        // Р•СЃР»Рё СЂР°Р·РЅРёС†Р° РІ 2 СЃРёРјРІРѕР»Р° в†’ РїСЂРѕРІРµСЂСЏРµРј РїРµСЂРµСЃС‚Р°РЅРѕРІРєСѓ
         if (diffCount == 2 && firstDiffPos != -1 && secondDiffPos != -1) {
             if (value[firstDiffPos] == keyword[secondDiffPos] &&
                 value[secondDiffPos] == keyword[firstDiffPos]) {
-                errors.push_back("Ошибка: возможная перестановка символов в ключевом слове '" +
-                    value + "'. Возможно, вы имели в виду '" + keyword + "'.");
+                errors.push_back(
+                    "РћС€РёР±РєР°: РІРѕР·РјРѕР¶РЅР°СЏ РїРµСЂРµСЃС‚Р°РЅРѕРІРєР° СЃРёРјРІРѕР»РѕРІ РІ РєР»СЋС‡РµРІРѕРј СЃР»РѕРІРµ '" + value +
+                    "'. Р’РѕР·РјРѕР¶РЅРѕ, РІС‹ РёРјРµР»Рё РІ РІРёРґСѓ '" + keyword + "'."
+                );
                 return false;
             }
         }
     }
 
-    return false;
+    return false; // РќРµ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ Рё РЅРµ РѕРїРµС‡Р°С‚РєР°
 }
 
-bool Scanner::hasSameCharacters(const std::string& s1, const std::string& s2) const {
-    if (s1.length() != s2.length()) {
-        return false;
-    }
-
-    std::unordered_map<char, int> charCount;
-
-    for (char c : s1) {
-        charCount[c]++;
-    }
-
-    for (char c : s2) {
-        if (charCount.find(c) == charCount.end() || charCount[c] == 0) {
-            return false;
-        }
-        charCount[c]--;
-    }
-
-    return true;
-}
-
-// Проверка на соответствие скобок
-bool Scanner::isMatchingBracket(char open, char close) const {
-    return (open == '{' && close == '}') ||
-        (open == '[' && close == ']') ||
-        (open == '(' && close == ')');
-}
-
-// Просмотр следующего символа без его извлечения
+// РџСЂРѕСЃРјРѕС‚СЂ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃРёРјРІРѕР»Р° Р±РµР· РµРіРѕ РёР·РІР»РµС‡РµРЅРёСЏ
 char Scanner::peekNextChar() {
     char ch = file.peek();
     return ch;
@@ -243,7 +270,7 @@ void Scanner::saveErrorsToFile(const std::string& filename) const {
         errorFile.close();
     }
     else {
-        std::cerr << "Ошибка: не удалось открыть файл для записи ошибок.\n";
+        std::cerr << "РћС€РёР±РєР°: РЅРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ С„Р°Р№Р» РґР»СЏ Р·Р°РїРёСЃРё РѕС€РёР±РѕРє.\n";
     }
 }
 
@@ -252,41 +279,41 @@ void Scanner::saveTokensToFile(const std::string& filename) const {
     if (tokenFile.is_open()) {
         for (const auto& token : tokens) {
             tokenFile << "(" << token.tableType << ", " << token.index << ")" << std::endl;
-            if (token.tableType==30)
-                hashTable.addLexeme(token.value, 30); // Добавляем идентификатор в таблицу
+            if (token.tableType == 30)
+                hashTable.addLexeme(token.value, 30); // Р”РѕР±Р°РІР»СЏРµРј РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РІ С‚Р°Р±Р»РёС†Сѓ
             if (token.tableType == 40)
-                hashTable.addLexeme(token.value, 40); // Добавляем константу в таблицу
+                hashTable.addLexeme(token.value, 40); // Р”РѕР±Р°РІР»СЏРµРј РєРѕРЅСЃС‚Р°РЅС‚Сѓ РІ С‚Р°Р±Р»РёС†Сѓ
 
         }
         tokenFile.close();
     }
     else {
-        std::cerr << "Ошибка: не удалось открыть файл для записи токенов.\n";
+        std::cerr << "РћС€РёР±РєР°: РЅРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ С„Р°Р№Р» РґР»СЏ Р·Р°РїРёСЃРё С‚РѕРєРµРЅРѕРІ.\n";
     }
 }
 
-// Проверка на допустимый идентификатор
+// РџСЂРѕРІРµСЂРєР° РЅР° РґРѕРїСѓСЃС‚РёРјС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ
 bool Scanner::isValidIdentifier(const std::string& identifier) const {
     if (identifier.empty() || !std::isalpha(identifier[0])) {
-        return false; // Идентификатор должен начинаться с буквы
+        return false; // РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РґРѕР»Р¶РµРЅ РЅР°С‡РёРЅР°С‚СЊСЃСЏ СЃ Р±СѓРєРІС‹
     }
     for (char c : identifier) {
         if (!std::isalnum(c) && c != '_') {
-            return false; // Разрешены только буквы, цифры и символ подчеркивания
+            return false; // Р Р°Р·СЂРµС€РµРЅС‹ С‚РѕР»СЊРєРѕ Р±СѓРєРІС‹, С†РёС„СЂС‹ Рё СЃРёРјРІРѕР» РїРѕРґС‡РµСЂРєРёРІР°РЅРёСЏ
         }
     }
     return true;
 }
 
-// Проверка на допустимую константу (число или дробь)
+// РџСЂРѕРІРµСЂРєР° РЅР° РґРѕРїСѓСЃС‚РёРјСѓСЋ РєРѕРЅСЃС‚Р°РЅС‚Сѓ (С‡РёСЃР»Рѕ РёР»Рё РґСЂРѕР±СЊ)
 bool Scanner::isValidConstant(const std::string& constant) const {
     std::istringstream iss(constant);
     double d;
     char c;
-    return (iss >> d) && !(iss >> c); // Если удалось считать число и больше ничего нет
+    return (iss >> d) && !(iss >> c); // Р•СЃР»Рё СѓРґР°Р»РѕСЃСЊ СЃС‡РёС‚Р°С‚СЊ С‡РёСЃР»Рѕ Рё Р±РѕР»СЊС€Рµ РЅРёС‡РµРіРѕ РЅРµС‚
 }
 
-// Создать токен
+// РЎРѕР·РґР°С‚СЊ С‚РѕРєРµРЅ
 Token Scanner::createToken(const std::string& value, int tableType, int index) const {
     Token token;
     token.value = value;
@@ -297,7 +324,7 @@ Token Scanner::createToken(const std::string& value, int tableType, int index) c
     return token;
 }
 
-// Получить следующий символ
+// РџРѕР»СѓС‡РёС‚СЊ СЃР»РµРґСѓСЋС‰РёР№ СЃРёРјРІРѕР»
 char Scanner::getNextChar() {
     char ch = file.get();
     if (ch == '\n') {
@@ -310,7 +337,7 @@ char Scanner::getNextChar() {
     return ch;
 }
 
-// Вернуть символ обратно в поток
+// Р’РµСЂРЅСѓС‚СЊ СЃРёРјРІРѕР» РѕР±СЂР°С‚РЅРѕ РІ РїРѕС‚РѕРє
 void Scanner::ungetChar() {
     file.unget();
     if (columnNumber > 0) {
@@ -318,22 +345,17 @@ void Scanner::ungetChar() {
     }
 }
 
-// Проверить, является ли токен ключевым словом
-bool Scanner::isKeyword(const std::string& value) const {
-    return hashTable.findConstantTableIndexByValue(value, TABLE_KEYWORDS) != -1;
-}
-
-// Проверить, является ли символ разделителем
+// РџСЂРѕРІРµСЂРёС‚СЊ, СЏРІР»СЏРµС‚СЃСЏ Р»Рё СЃРёРјРІРѕР» СЂР°Р·РґРµР»РёС‚РµР»РµРј
 bool Scanner::isDelimiter(const std::string& ch) const {
     return hashTable.findConstantTableIndexByValue(ch, TABLE_DELIMITERS) != -1;
 }
 
-// Получить токены
+// РџРѕР»СѓС‡РёС‚СЊ С‚РѕРєРµРЅС‹
 const std::vector<Token>& Scanner::getTokens() const {
     return tokens;
 }
 
-// Получить ошибки
+// РџРѕР»СѓС‡РёС‚СЊ РѕС€РёР±РєРё
 const std::vector<std::string>& Scanner::getErrors() const {
     return errors;
 }

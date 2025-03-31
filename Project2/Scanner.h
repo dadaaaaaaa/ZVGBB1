@@ -1,58 +1,68 @@
 #ifndef SCANNER_H
 #define SCANNER_H
-
+#include "HashTable.h"
 #include <string>
 #include <vector>
 #include <fstream>
-#include <stack>
-#include "HashTable.h"
+#include <unordered_set>
 
-// Типы таблиц
-enum TableType {
-    TABLE_KEYWORDS = 10,    // Ключевые слова
-    TABLE_DELIMITERS = 20,  // Разделители
-    TABLE_IDENTIFIERS = 30, // Идентификаторы
-    TABLE_CONSTANTS = 40     // Константы
-};
+// Константы для типов таблиц
+const int TABLE_DELIMITERS = 10;
+const int TABLE_KEYWORDS = 20;
+const int TABLE_IDENTIFIERS = 30;
+const int TABLE_CONSTANTS = 40;
 
-// Структура токена
+// Структура для хранения информации о токене
 struct Token {
-    int tableType;  // Тип таблицы (10, 20, 30, 40)
-    int index;      // Номер элемента в таблице
-    std::string value; // Значение токена (для отладки)
-    int line;       // Номер строки
-    int column;     // Номер столбца
+    std::string value;
+    int tableType;
+    int index;
+    int line;
+    int column;
 };
 
-// Класс сканера
 class Scanner {
 public:
-    Scanner(const std::string& filename, HashTable& hashTable); // Конструктор
-    bool scan();                          // Запуск сканирования
-    const std::vector<Token>& getTokens() const; // Получить токены
-    const std::vector<std::string>& getErrors() const; // Получить ошибки
-    bool isMatchingBracket(char open, char close) const; // Проверка соответствия скобок
-    int levenshteinDistance(const std::string& s1, const std::string& s2) const; // Расстояние Левенштейна
+    // Конструктор
+    Scanner(const std::string& filename, HashTable& hashTable);
+
+    // Основной метод сканирования
+    bool scan();
+
+    // Проверка, является ли строка ключевым словом
+    bool isKeyword(const std::string& value);
+
+    // Проверка на допустимый идентификатор
+    bool isValidIdentifier(const std::string& identifier) const;
+
+    // Проверка на допустимую константу
+    bool isValidConstant(const std::string& constant) const;
+
+    // Проверка на разделитель
+    bool isDelimiter(const std::string& ch) const;
+
+    // Получение токенов
+    const std::vector<Token>& getTokens() const;
+
+    // Получение ошибок
+    const std::vector<std::string>& getErrors() const;
 
 private:
-    std::ifstream file;                   // Файл для чтения
-    HashTable& hashTable;                 // Ссылка на HashTable
-    std::vector<Token> tokens;            // Массив токенов
-    std::vector<std::string> errors;      // Массив ошибок
-    std::stack<char> bracketStack;        // Стек для отслеживания скобок
-    int lineNumber;                       // Текущая строка
-    int columnNumber;                     // Текущий столбец
+    // Вспомогательные методы
+    char peekNextChar();
+    char getNextChar();
+    void ungetChar();
+    Token createToken(const std::string& value, int tableType, int index) const;
+    void saveErrorsToFile(const std::string& filename) const;
+    void saveTokensToFile(const std::string& filename) const;
 
-    // Состояния ДКА
-    enum State {
-        STATE_START,        // Начальное состояние
-        STATE_IDENTIFIER,   // Идентификатор
-        STATE_CONSTANT,     // Константа
-        STATE_KEYWORD,      // Ключевое слово
-        STATE_DELIMITER,    // Разделитель
-        STATE_ERROR         // Ошибка
-    };
-    Token createToken(const std::string& value, int tableType, int index) const; // Создать токен
+    // Поля класса
+    std::ifstream file;
+    HashTable& hashTable;
+    std::vector<Token> tokens;
+    std::vector<std::string> errors;
+    int lineNumber;
+    int columnNumber;
 };
 
 #endif // SCANNER_H

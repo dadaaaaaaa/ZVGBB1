@@ -29,6 +29,7 @@ public:
     void loadFromFile(const std::string& filename, int type);
     void saveToFile(const std::string& filename, int type) const;
     static int getValidatedInput(const std::string& prompt, int min, int max);
+    std::vector<std::string> getKeywordTableValues() const;
 private:
     // Вспомогательные методы
    

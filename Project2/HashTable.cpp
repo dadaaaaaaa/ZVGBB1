@@ -440,3 +440,13 @@ int HashTable::findConstantTableIndexByValue(const std::string& value, int type)
     }
     return -1;
 }
+
+std::vector<std::string> HashTable::getKeywordTableValues() const {
+    std::vector<std::string> values;
+    for (size_t i = 0; i < keywordTable.size(); ++i) {
+        if (keywordTable[i]) {
+            values.push_back(keywordTable[i]->getValue());
+        }
+    }
+    return values;
+}
