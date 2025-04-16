@@ -1,9 +1,5 @@
-t
-y
-r
-x
-ad
-wr2
+program
+num
+idf
+b
 a
-z
-a1r

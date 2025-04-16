@@ -1,8 +1,4 @@
--10
-new
-10
-root
-ad
-end
-program
-begin
+5
+4
+3
+2

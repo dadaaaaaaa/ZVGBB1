@@ -24,9 +24,8 @@ int HashTable::getValidatedInput(const std::string& prompt, int min, int max) {
 }
 
 HashTable::HashTable() {
-    // Инициализация таблиц с начальным размером
-    identifierTable.resize(16); // Начальный размер таблицы идентификаторов
-    constantTable.resize(16);   // Начальный размер таблицы констант
+    identifierTable.resize(1000); // Начальный размер таблицы идентификаторов
+    constantTable.resize(1000);   // Начальный размер таблицы констант
 }
 
 size_t HashTable::hashFunction(const std::string& value, size_t tableSize) const {

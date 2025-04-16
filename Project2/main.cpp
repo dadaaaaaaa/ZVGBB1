@@ -1,6 +1,8 @@
 #include <iostream>
-#include "Scanner.h" // Подключаем заголовочный файл сканера
+#include "Scanner.h"
 #include <clocale>
+#include "Pars.h"
+
 
 void displayMenu() {
     std::cout << "=== Меню ===\n";
@@ -13,14 +15,17 @@ void displayMenu() {
     std::cout << "7. Поиск номера лексемы в постоянной таблице по имени\n";
     std::cout << "8. Добавить атрибут к лексеме\n";
     std::cout << "9. Получить атрибут лексемы\n";
-    std::cout << "10. Запустить сканер\n"; // Новая опция для сканера
-    std::cout << "11. Выход\n";
+    std::cout << "10. Запустить сканер\n";
+    std::cout << "11. Запустить парсер\n";
+    std::cout << "12. Выход\n";
     std::cout << "Выберите опцию: ";
 }
 
 int main() {
-    HashTable ht; // Создаем хеш-таблицу (без указания размера)
+    HashTable ht;
     setlocale(LC_ALL, "");
+    Scanner* currentScanner = nullptr;
+    Parser* currentParser = nullptr;
 
     // Загрузка данных из файлов
     ht.loadFromFile("keywords.txt", 10); // Ключевые слова
@@ -31,7 +36,7 @@ int main() {
     int choice;
     do {
         displayMenu();
-        choice = HashTable::getValidatedInput("", 1, 11); // Обновлен диапазон выбора
+        choice = HashTable::getValidatedInput("", 1, 12);
 
         switch (choice) {
         case 1: { // Добавить лексему вручную
@@ -117,15 +122,15 @@ int main() {
             break;
         }
         case 10: { // Запуск сканера
-            std::string filename;
-            std::cout << "Введите имя файла для сканирования: ";
-            std::cin >> filename;
+            std::string filename = "1.txt";
+            /*std::cout << "Введите имя файла для сканирования: ";
+            std::cin >> filename;*/
 
-            Scanner scanner(filename, ht); // Передаем ссылку на HashTable
-            if (scanner.scan()) {
+            currentScanner = new Scanner(filename, ht);
+            if (currentScanner->scan()) {
                 std::cout << "Сканирование завершено успешно.\n";
                 std::cout << "Токены:\n";
-                for (const auto& token : scanner.getTokens()) {
+                for (const auto& token : currentScanner->getTokens()) {
                     std::cout << "(" << token.tableType << ", " << token.index << ") "
                         << "Значение: " << token.value
                         << ", Строка: " << token.line << ", Столбец: " << token.column << "\n";
@@ -133,13 +138,37 @@ int main() {
             }
             else {
                 std::cout << "Сканирование завершено с ошибками.\n";
-                for (const auto& error : scanner.getErrors()) {
+                for (const auto& error : currentScanner->getErrors()) {
                     std::cout << error << "\n";
                 }
             }
             break;
         }
-        case 11: { // Выход
+        case 11: { // Запуск парсера
+            if (!currentScanner || currentScanner->getTokens().empty()) {
+                std::cout << "Сначала выполните сканирование (пункт 10)\n";
+                break;
+            }
+
+            // Удаляем предыдущий парсер, если был
+            if (currentParser) {
+                delete currentParser;
+                currentParser = nullptr;
+            }
+
+            currentParser = new Parser(currentScanner->getTokens(), ht);
+            if (currentParser->parse()) {
+                std::cout << "Парсинг завершен успешно!\n";
+            }
+            else {
+                std::cout << "Ошибки парсинга:\n";
+                for (const auto& error : currentParser->getErrors()) {
+                    std::cout << error << "\n";
+                }
+            }
+            break;
+        }
+        case 12: { // Выход
             std::cout << "Выход из программы.\n";
             break;
         }
@@ -147,7 +176,7 @@ int main() {
             std::cout << "Неверный выбор. Попробуйте снова.\n";
         }
         }
-    } while (choice != 11);
+    } while (choice != 12);
 
     return 0;
 }

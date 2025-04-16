@@ -62,16 +62,22 @@ bool Scanner::scan() {
                 getNextChar();
                 continue;
             }
-            if (ch == '/' && peekNextChar() == '*') {
-                inMultiLineComment = true;
-                multiLineCommentStartLine = currentLine;
-                getNextChar();
-                continue;
+            if (!inMultiLineComment) {
+                // Обработка начала многострочного комментария
+                if (ch == '/' && peekNextChar() == '*') {
+                    inMultiLineComment = true; // Входим в многострочный комментарий
+                    multiLineCommentStartLine = currentLine; // Запоминаем строку начала комментария
+                    getNextChar(); // Считываем '*'
+                    continue;
+                }
             }
-            if (inMultiLineComment && ch == '*' && peekNextChar() == '/') {
-                inMultiLineComment = false;
-                getNextChar();
-                continue;
+            else {
+                // Если мы внутри многострочного комментария
+                if (ch == '*' && peekNextChar() == '/') {
+                    inMultiLineComment = false; // Закрываем комментарий
+                    getNextChar(); // Считываем '/'
+                    continue;
+                }
             }
         }
 

@@ -30,15 +30,15 @@ public:
     void saveToFile(const std::string& filename, int type) const;
     static int getValidatedInput(const std::string& prompt, int min, int max);
     std::vector<std::string> getKeywordTableValues() const;
+    bool isLexemeExists(const std::string& value, int type) const;
 private:
     // Вспомогательные методы
-   
+
     size_t hashFunction(const std::string& value, size_t tableSize) const;
     void rehash(std::vector<std::vector<std::unique_ptr<Lexeme>>>& table);
     void sortTable(std::vector<std::unique_ptr<Lexeme>>& table);
     int determineDataType(const std::string& value) const;
     void ensureFileExists(const std::string& filename) const;
-    bool isLexemeExists(const std::string& value, int type) const;
 
     // Таблицы
     std::vector<std::vector<std::unique_ptr<Lexeme>>> identifierTable; // Таблица идентификаторов

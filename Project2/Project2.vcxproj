@@ -130,14 +130,17 @@
     <ClCompile Include="HashTable.cpp" />
     <ClCompile Include="Lexeme.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Pars.cpp" />
     <ClCompile Include="Scanner.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Lexeme.h" />
     <ClInclude Include="HashTable.h" />
+    <ClInclude Include="Pars.h" />
     <ClInclude Include="Scanner.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="1.txt" />
     <Text Include="constants.txt" />
     <Text Include="delimiters.txt" />
     <Text Include="identifiers.txt" />

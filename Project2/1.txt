@@ -1,7 +1,6 @@
-whili ( a + b = c){ 
-if  a = c )
-retern b ; /* b=0 */
-else 
-return a ; /* b != 
+a = 4 ;
+b = 2 ;
+while ( a | b ) {
+	a = b ;
 }
-// ghjuhfvvf [p xtuj]
+a = b ;
