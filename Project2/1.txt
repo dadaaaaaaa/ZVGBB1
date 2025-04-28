@@ -1,6 +1,11 @@
-a = 4 ;
-b = 2 ;
-while ( a | b ) {
-	a = b ;
-}
-a = b ;
+ a = b ;
+ a = b + c + c ;
+ if ( a | b ) {
+ a = b ; 
+ a = a + b ;
+ } else {
+ a = c ;
+ } 
+ while ( a | b ) {
+  a = a + b ;
+ }

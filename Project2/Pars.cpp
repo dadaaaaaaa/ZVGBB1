@@ -12,217 +12,123 @@ void Parser::initialize() {
     init_actionTable();
     init_gotoTable();
 }
-
+//правила для сверки 
 void Parser::init_Product() {
     productions = {
         // Основные правила
-        {PROGRAM, 1},          // program → stmt_list
-        {STMT_LIST, 3},        // stmt_list → stmt ; stmt_list
-        {STMT_LIST, 0},        // stmt_list → ε
-
-        // Операторы
-        {STMT, 4},             // stmt → id = expr ;
-        {STMT, 5},             // stmt → while ( expr ) block
-        {STMT, 3},             // stmt → block
-
-        // Блоки
-        {BLOCK, 3},            // block → { stmt_list }
-
-        // Выражения
-        {EXPR, 3},             // expr → expr | expr
-        {EXPR, 1},             // expr → term
-        {TERM, 1},             // term → factor
-        {FACTOR, 1},           // factor → id
-        {FACTOR, 1}            // factor → num
+        {PROGRAM, 1},          //0 program → stmt_list
+        {STMT_LIST, 3},        // 1stmt_list → stmt stmt_list
+        {STMT_LIST, 0},        // 2stmt_list → ε
+        {STMT, 4},             // 3stmt → id = expr ;
+        {STMT, 3},             // 4stmt → block
+        {BLOCK, 3},            // 5block → { stmt_list }
+        {EXPR, 3},             // 6expr → expr + term
+        {EXPR, 1},             // 7expr → term
+        {TERM, 1},             // 8term → factor
+        {FACTOR, 3},           // 9factor → id
+          {FACTOR, 3},           //10 factor → id
+            {FACTOR, 3},           // 11factor → id
+              {FACTOR, 3},           // 12factor → id
+                {FACTOR, 3},           // 13factor → id
+                  {FACTOR, 3},           // 14factor → id
+                    {FACTOR, 3},           // 15factor → id
+                      {FACTOR, 5},           // 16factor → id
+                        {FACTOR, 3},           // factor → id
+                          {FACTOR, 3},           // factor → id
+                            {FACTOR, 3},           // factor → id
+                              {FACTOR, 3},           // factor → id
+                            {FACTOR, 3},           // factor → id
+                            {FACTOR, 3},           // factor → id
+                    {FACTOR, 3},           // factor → id
+              {FACTOR, 3},           // factor → id
+              {FACTOR, 3},           // factor → id
+        {FACTOR, 3}            // factor → num
     };
 }
+//таблица с тем что может стоять и где
 
 void Parser::init_actionTable() {
     // Начальные состояния
     actionTable[0][T_ID] = { Action::SHIFT, 10 };      // a
-    actionTable[0][T_WHILE] = { Action::SHIFT, 20 };  // while
+    actionTable[0][T_IF] = { Action::SHIFT, 20 };      // if
+    actionTable[0][T_WHILE] = { Action::SHIFT, 20 };  //while
+    actionTable[0][T_EOF] = { Action::ACCEPT, 0 };
 
     // Присваивание
-    actionTable[10][T_EQ] = { Action::SHIFT, 11 };     // =
-    actionTable[11][T_ID] = { Action::SHIFT, 10 };     // b
-    actionTable[11][T_NUM] = { Action::SHIFT, 40 };    // 4
+    actionTable[10][T_EQ] = { Action::SHIFT, 11 };      // a =
 
-    // После числа в присваивании
-    actionTable[40][T_SEMICOLON] = { Action::SHIFT, 41 }; // ;
+    actionTable[11][T_ID] = { Action::SHIFT, 12 };      // b
+    actionTable[11][T_NUM] = { Action::SHIFT, 12 };      // 4
+    actionTable[11][T_SEMICOLON] = { Action::REDUCE, 10 };      // 4
+    actionTable[11][T_PLUS] = { Action::SHIFT, 13 };//a=+
 
-    // После точки с запятой (новое состояние)
-    actionTable[41][T_ID] = { Action::SHIFT, 10 };     // b после a=4;
-    actionTable[41][T_WHILE] = { Action::SHIFT, 20 };  // while после a=4;
-    actionTable[41][T_EOF] = { Action::REDUCE, 1 };    // конец программы
+    actionTable[12][T_SEMICOLON] = { Action::REDUCE, 16 }; // a = b;
 
-    // While
-    actionTable[20][T_LPAREN] = { Action::SHIFT, 21 }; // (
-    actionTable[21][T_ID] = { Action::SHIFT, 10 };     // a
-    actionTable[21][T_NUM] = { Action::SHIFT, 40 };    // 2
-    // Исправленная обработка условия while
-    actionTable[50][T_RPAREN] = { Action::REDUCE, 7 };  // expr → expr | expr
-    actionTable[51][T_RPAREN] = { Action::SHIFT, 52 };  // закрывающая скобка условия
+    actionTable[13][T_NUM] = { Action::REDUCE, 6 };      // 4
+    actionTable[13][T_ID] = { Action::REDUCE, 6 };      // b
 
-    // После закрытия условия while
-    actionTable[52][T_LBRACE] = { Action::SHIFT, 60 };  // {
+    actionTable[12][T_PLUS] = { Action::SHIFT, 13 };    // b +
 
-    // Обработка идентификатора после |
-    actionTable[50][T_ID] = { Action::SHIFT, 10 };
-    actionTable[50][T_NUM] = { Action::SHIFT, 40 };
-    // Побитовое ИЛИ
-    actionTable[10][T_OR] = { Action::SHIFT, 50 };     // |
-    actionTable[40][T_OR] = { Action::SHIFT, 50 };     // |
-    actionTable[50][T_ID] = { Action::SHIFT, 10 };     // b
-    actionTable[50][T_NUM] = { Action::SHIFT, 40 };    // 2
+    actionTable[14][T_SEMICOLON] = { Action::REDUCE, 16 }; // a = b + c;
 
-    // Закрывающая скобка
-    actionTable[51][T_RPAREN] = { Action::SHIFT, 52 }; // )
+    // Условный оператор
+    actionTable[20][T_LPAREN] = { Action::SHIFT, 21 };   // (
+    actionTable[21][T_ID] = { Action::SHIFT, 22 };       // a
+    actionTable[22][T_OR] = { Action::SHIFT, 23 };      // |
+    actionTable[23][T_ID] = { Action::SHIFT, 24 };       // b
+    actionTable[24][T_pit] = { Action::REDUCE, 16 };    // ,
+    actionTable[24][T_RPAREN] = { Action::SHIFT, 25 };    // )
 
-    // Блоки
-    actionTable[52][T_LBRACE] = { Action::SHIFT, 60 }; // {
-    actionTable[60][T_ID] = { Action::SHIFT, 10 };     // a
-    actionTable[60][T_RBRACE] = { Action::SHIFT, 61 }; // }
-    // Полностью переработанная секция для условий while
-    actionTable[21][T_ID] = { Action::SHIFT, 100 };  // Начало выражения
-    actionTable[21][T_NUM] = { Action::SHIFT, 101 };
+    actionTable[25][T_LBRACE] = { Action::SHIFT, 26 };    // {
 
-    // Обработка битового ИЛИ в условиях
-    actionTable[100][T_OR] = { Action::SHIFT, 102 };
-    actionTable[101][T_OR] = { Action::SHIFT, 102 };
+    // Добавляем ожидание stmt_list после {
+    actionTable[26][T_ID] = { Action::SHIFT, 27 };        // Ожидаем stmt внутри блока
+    actionTable[26][T_IF] = { Action::SHIFT, 20 };        // Ожидаем if внутри блока
 
-    // Правый операнд после |
-    actionTable[102][T_ID] = { Action::SHIFT, 100 };
-    actionTable[102][T_NUM] = { Action::SHIFT, 101 };
-    actionTable[203][T_RPAREN] = { Action::SHIFT, 204 }; // Принять )
+    // Теперь, когда мы видим stmt внутри блока
+    actionTable[27][T_EQ] = { Action::SHIFT, 11 };        // stmt → id = expr;
 
-    // Обработка закрывающей фигурной скобки
-    actionTable[10][T_RBRACE] = { Action::REDUCE, 4 };   // stmt → expr;
-    actionTable[221][T_RBRACE] = { Action::SHIFT, 222 }; // Завершение блока
+    // Закрытие блока
+    actionTable[26][T_RBRACE] = { Action::SHIFT, 28 };    // Закрываем блок }
+    //else
+    actionTable[28][T_ELSE] = { Action::SHIFT, 25 };
 
-    // Запрещаем повторную обработку
-    actionTable[204][T_RPAREN] = { Action::ERROR, 0 };
-    actionTable[222][T_RBRACE] = { Action::ERROR, 0 };
-    // Закрывающая скобка условия
-    actionTable[100][T_RPAREN] = { Action::REDUCE, 8 };  // expr → term
-    actionTable[101][T_RPAREN] = { Action::REDUCE, 8 };  // expr → term
-    actionTable[103][T_RPAREN] = { Action::SHIFT, 104 }; // expr → expr | expr
-    actionTable[101][T_RPAREN] = { Action::REDUCE, 8 };  // expr → term (4)
-    actionTable[103][T_RPAREN] = { Action::REDUCE, 7 };  // expr → expr | expr
-    actionTable[203][T_RPAREN] = { Action::SHIFT, 104 }; // Принять закрывающую скобку
-    actionTable[105][T_ID] = { Action::SHIFT, 10 };  // Разрешаем идентификаторы в теле
-    actionTable[105][T_RBRACE] = { Action::SHIFT, 106 }; // Закрытие блока
-    actionTable[10][T_RBRACE] = { Action::REDUCE, 8 };  // stmt → expr;
-    actionTable[10][T_RBRACE] = { Action::REDUCE, 4 };   // stmt → expr;
-    actionTable[203][T_RBRACE] = { Action::SHIFT, 300 }; // Завершение блока
+    actionTable[28][!T_ELSE] = { Action::SHIFT, 0 };
 
-    // Явное правило для выхода из блока
-    actionTable[300][T_EOF] = { Action::REDUCE, 5 };     // while_stmt → while (expr) block
-    actionTable[300][T_ID] = { Action::SHIFT, 10 };      // Разрешаем операторы после блока
-
-    // Удаляем ошибочные переходы
-    actionTable[11][T_RBRACE] = { Action::ERROR, 0 };    // Запрещаем } после =
-    // Явное правило для блока
-    actionTable[222][T_EOF] = { Action::REDUCE, 5 };    // while_stmt → while (expr) block
-    // Обработка присваивания в теле цикла
-    actionTable[10][T_EOF] = { Action::REDUCE, 4 };      // stmt → expr;
-    actionTable[300][T_EOF] = { Action::REDUCE, 5 };     // while_stmt → while (expr) block
-    actionTable[1][T_EOF] = { Action::ACCEPT, 0 };       // Успешное завершение
-
-    // Явные переходы для завершающих состояний
-    actionTable[40][T_EOF] = { Action::REDUCE, 8 };      // term → factor
-    actionTable[203][T_EOF] = { Action::REDUCE, 7 };     // expr → expr | expr
-    // Явное правило для выхода из блока
-    actionTable[222][T_EOF] = { Action::REDUCE, 5 };     // while_stmt → while (expr) block
-    actionTable[222][T_ID] = { Action::SHIFT, 10 };      // Разрешаем операторы после блока
-
-    // Защита от повторной обработки
-    actionTable[11][T_RBRACE] = { Action::ERROR, 0 };    // Запрещаем } после =
-    // Завершение блока
-    actionTable[106][T_EOF] = { Action::REDUCE, 5 }; // while_stmt → while (expr) block
-    // Явное правило для while с условием
-    actionTable[104][T_LBRACE] = { Action::SHIFT, 105 }; // {
-    // Тело while
-    actionTable[104][T_LBRACE] = { Action::SHIFT, 105 };
-    // Конец программы
-    actionTable[1][T_EOF] = { Action::ACCEPT, 0 };
 }
 
+//куда что за правило из 1-ой таблицы 
 void Parser::init_gotoTable() {
-    // Основные переходы
-    gotoTable[0][PROGRAM] = { Action::GOTO, 1 };
-    gotoTable[0][STMT_LIST] = { Action::GOTO, 2 };
-    gotoTable[0][STMT] = { Action::GOTO, 3 };
-    gotoTable[21][EXPR] = { Action::GOTO, 200 };
-    gotoTable[100][EXPR] = { Action::GOTO, 200 };
-    gotoTable[101][EXPR] = { Action::GOTO, 200 };
-    gotoTable[102][EXPR] = { Action::GOTO, 203 };
-    gotoTable[21][CONDITION] = { Action::GOTO, 210 }; // Условие while
-    gotoTable[203][CONDITION] = { Action::GOTO, 210 }; // После полного выражения
-    // Переход к телу while
-    gotoTable[104][STMT] = { Action::GOTO, 300 };
-    // После завершения оператора
-    gotoTable[41][STMT_LIST] = { Action::GOTO, 42 };
-    gotoTable[42][STMT] = { Action::GOTO, 3 };
-    gotoTable[21][EXPR] = { Action::GOTO, 51 };  // переход к обработке expr в условии
-    gotoTable[50][EXPR] = { Action::GOTO, 51 };  // после |
-    gotoTable[105][STMT_LIST] = { Action::GOTO, 220 };
-    gotoTable[220][STMT] = { Action::GOTO, 221 };
-    gotoTable[105][BLOCK] = { Action::GOTO, 230 };
-    gotoTable[222][PROGRAM] = { Action::GOTO, 1 }; // Возврат к корню
-    // Завершение блока
-    gotoTable[106][STMT] = { Action::GOTO, 300 }; // Возврат из блока
-    // Переход после закрытия условия
-    gotoTable[52][STMT] = { Action::GOTO, 53 };  // к телу while
-    // Для выражений
-    gotoTable[10][EXPR] = { Action::GOTO, 12 };
-    gotoTable[40][EXPR] = { Action::GOTO, 12 };
-    gotoTable[50][EXPR] = { Action::GOTO, 51 };
-    gotoTable[204][WHILE_COND] = { Action::GOTO, 205 };
-    gotoTable[222][BLOCK] = { Action::GOTO, 223 };
-    gotoTable[222][STMT_LIST] = { Action::GOTO, 2 };     // Возврат к списку операторов
-    gotoTable[222][STMT] = { Action::GOTO, 3 };          // Для следующего оператора
-    // Удаляем циклические переходы
-    gotoTable.erase(203);
-    gotoTable.erase(221);
-    // Для while
-    gotoTable[20][STMT] = { Action::GOTO, 22 };
-    gotoTable[21][EXPR] = { Action::GOTO, 23 };
-    gotoTable[23][STMT] = { Action::GOTO, 24 };
-    gotoTable[203][BLOCK] = { Action::GOTO, 301 };   // Специальное состояние для }
-    gotoTable[300][PROGRAM] = { Action::GOTO, 1 };       // Возврат к корню
-    gotoTable[300][STMT_LIST] = { Action::GOTO, 2 };     // Возврат к списку операторов
-    gotoTable[10][PROGRAM] = { Action::GOTO, 1 };        // Завершение программы
-    gotoTable[300][PROGRAM] = { Action::GOTO, 1 };
-    gotoTable[40][PROGRAM] = { Action::GOTO, 1 };
-
-    // Удаляем все лишние переходы
-    gotoTable.erase(203);
-    gotoTable.erase(11);
-    // Удаляем проблемные переходы
-    gotoTable.erase(10);
-    gotoTable.erase(221);
-    // Для блоков
-    gotoTable[60][STMT_LIST] = { Action::GOTO, 62 };
+    gotoTable[10][PROGRAM] = { Action::GOTO, 0 };    // После stmt
+    gotoTable[0][BLOCK] = { Action::GOTO, 0 };      // Переход на блок
+    gotoTable[6][EXPR] = { Action::GOTO, 6 };  // ф+и
+    gotoTable[16][STMT] = { Action::GOTO, 3 };  // а=и
+    
 }
 
-const std::vector<std::string>& Parser::getErrors() const {
-    return errors;
-}
+
+
 
 
 void Parser::executeAction(const Action& action, std::stack<int>& states, std::stack<Symbol>& symbols, size_t& pos) {
+    std::cout << "Executing action: ";
     switch (action.type) {
     case Action::SHIFT:
+        std::cout << "SHIFT to state " << action.value << " with token: " << tokens[pos].value << "\n";
         states.push(action.value);
         symbols.emplace(tokens[pos]);
         pos++;
         break;
 
     case Action::REDUCE: {
-        Production& prod = productions[action.value];
+        symbols.emplace(tokens[pos]);
+        states.push(action.value);
 
-        // Проверка переменных (только для идентификаторов)
-        if (prod.lhs == STMT && prod.rhsSize == 3) { // Правило id = expr
+        Production& prod = productions[action.value];
+        std::cout << "REDUCE by production: " << prod.lhs << " -> " << prod.rhsSize << " symbols\n";
+
+        // Проверка переменных
+        if (prod.lhs == STMT && prod.rhsSize == 3) {
             if (symbols.top().type == Symbol::TERMINAL) {
                 Token id_token = symbols.top().token;
                 if (id_token.tableType == 30 && !hashTable.isLexemeExists(id_token.value, 30)) {
@@ -232,20 +138,29 @@ void Parser::executeAction(const Action& action, std::stack<int>& states, std::s
             }
         }
 
-        // Удаляем rhsSize элементов из стеков
-        for (int i = 0; i < prod.rhsSize; i++) {
-            if (symbols.empty()) break;
-            symbols.pop();
-            states.pop();
-        }
+        if (prod.lhs == EXPR || prod.lhs == FACTOR) {
+            for (int i = 0; i < prod.rhsSize - 1; i++) {
+                if (symbols.empty()) break;
+                symbols.pop();
+                states.pop();
 
+            }
+        }
+        else {
+            for (int i = 0; i < prod.rhsSize; i++) {
+                if (symbols.empty()) break;
+                symbols.pop();
+                states.pop();
+
+            }
+        }
         // Переход по gotoTable
         if (!states.empty()) {
             auto gotoIt = gotoTable.find(states.top());
             if (gotoIt != gotoTable.end()) {
                 auto gotoStateIt = gotoIt->second.find(prod.lhs);
                 if (gotoStateIt != gotoIt->second.end()) {
-                    states.push(gotoStateIt->second.value); // Используем .value
+                    states.push(gotoStateIt->second.value);
                     symbols.emplace(prod.lhs);
                 }
                 else {
@@ -256,30 +171,35 @@ void Parser::executeAction(const Action& action, std::stack<int>& states, std::s
                 errors.push_back("Invalid goto state");
             }
         }
+        pos++;
         break;
     }
 
     case Action::GOTO:
+        std::cout << "GOTO state " << action.value << "\n";
         states.push(action.value);
         break;
 
     case Action::ACCEPT:
-        // Обработка в основном цикле
+        std::cout << "ACCEPT\n";
         break;
 
     case Action::ERROR:
+        std::cout << "ERROR at token: " << tokens[pos - 1].value << "\n";
         handleError(tokens[pos - 1], states.top());
         break;
     }
 }
-
+const std::vector<std::string>& Parser::getErrors() const {
+    return errors;
+}
 bool Parser::parse() {
     std::stack<int> states;
     std::stack<Symbol> symbols;
     states.push(0);
 
     size_t pos = 0;
-    while (pos <= tokens.size()) {
+    while (pos < tokens.size()) {
         int state = states.top();
         const Token token = pos < tokens.size() ? tokens[pos] : Token{ "$", T_EOF, -1, -1, -1 };
         int term = getTerminalCode(token);
@@ -326,15 +246,32 @@ void Parser::handleError(const Token& token, int state) {
             expected.push_back(getTerminalName(actionPair.first));
         }
     }
-    errors.push_back("Unexpected " + token.value + ", expected: ");
+
+    std::string errorMessage = "Unexpected " + token.value + ", expected: ";
     if (!expected.empty()) {
-        errors.back() += expected[0];
+        errorMessage += expected[0];
         for (size_t i = 1; i < expected.size(); i++) {
-            errors.back() += ", " + expected[i];
+            errorMessage += ", " + expected[i];
         }
     }
+
+    // Добавляем ошибку в вектор ошибок
+    errors.push_back(errorMessage);
+
+    // Записываем ошибку в файл
+    writeErrorToFile(errorMessage);
 }
 
+void Parser::writeErrorToFile(const std::string& errorMessage) {
+    std::ofstream errorFile("error2.txt", std::ios::app); // Открываем файл для добавления
+    if (errorFile.is_open()) {
+        errorFile << errorMessage << std::endl; // Записываем ошибку
+        errorFile.close(); // Закрываем файл
+    }
+    else {
+        std::cerr << "Unable to open error file!" << std::endl; // Если не удалось открыть файл
+    }
+}
 std::string join(const std::vector<std::string>& vec, const std::string& delim) {
     std::string result;
     for (size_t i = 0; i < vec.size(); ++i) {
@@ -382,6 +319,8 @@ std::string Parser::getTerminalName(int term) const {
     case T_RBRACE: return "}";
     case T_ID: return "identifier";
     case T_NUM: return "number";
+
+    case T_pit: return ",";
     default: return "unknown";
     }
 }

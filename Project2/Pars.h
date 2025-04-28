@@ -40,6 +40,18 @@ public:
         Symbol() : type(TERMINAL) { new (&token) Token(); }
         Symbol(const Token& t) : type(TERMINAL) { new (&token) Token(t); }
         Symbol(NonTerminal n) : type(NON_TERMINAL) { nt = n; }
+
+        // Добавляем конструктор копирования
+        Symbol(const Symbol& other) {
+            type = other.type;
+            if (type == TERMINAL) {
+                new (&token) Token(other.token);
+            }
+            else {
+                nt = other.nt;
+            }
+        }
+
         ~Symbol() {
             if (type == TERMINAL) token.~Token();
         }
@@ -51,27 +63,30 @@ public:
         T_ELSE = 103,
         T_IF = 104,
         T_WHILE = 105,
+        T_EQ_EQ = 219,
         T_QUOTE = 200,      // "
         T_AND = 201,         // &
         T_LPAREN = 202,      // (
         T_RPAREN = 203,      // )
         T_MUL = 204,         // *
         T_PLUS = 205,        // +
-        T_MINUS = 206,       // -
-        T_DIV_EQ = 207,      // /=
-        T_COLON = 208,       // :
-        T_SEMICOLON = 209,   // ;
-        T_LSHIFT = 210,      // <<
-        T_EQ = 211,          // =
-        T_RSHIFT = 212,      // >>
-        T_LBRACKET = 213,    // [
-        T_RBRACKET = 214,    // ]
-        T_LBRACE = 215,      // {
-        T_OR = 216,          // |
-        T_OR_OR = 217,       // ||
-        T_RBRACE = 218,      // }
+        T_MINUS = 207,       // -
+        T_DIV_EQ = 208,      // /=
+        T_COLON = 209,       // :
+        T_SEMICOLON = 210,   // ;
+        T_LSHIFT = 211,      // <<
+        T_EQ = 212,          // =
+        T_RSHIFT = 213,      // >>
+        T_LBRACKET = 214,    // [
+        T_RBRACKET = 215,    // ]
+        T_LBRACE = 216,      // {
+        T_OR = 217,          // |
+        T_OR_OR = 218,       // ||
+        T_RBRACE = 219,      // }
+        T_pit = 206,      // }
         T_ID = 30,           // Идентификаторы
         T_NUM = 40,           // Числовые константы
+        
         T_EOF = 0
     };
 
@@ -90,7 +105,7 @@ private:
     std::vector<Production> productions;
     std::unordered_map<int, std::unordered_map<int, Action>> actionTable;
     std::unordered_map<int, std::unordered_map<int, Action>> gotoTable;
-
+    void writeErrorToFile(const std::string& errorMessage);
     void initialize();
     void init_Product();
     void init_actionTable();
