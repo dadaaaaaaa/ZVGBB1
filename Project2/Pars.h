@@ -62,28 +62,33 @@ public:
         T_DO = 102,
         T_ELSE = 103,
         T_IF = 104,
-        T_WHILE = 105,
-        T_EQ_EQ = 219,
-        T_QUOTE = 200,      // "
-        T_AND = 201,         // &
-        T_LPAREN = 202,      // (
-        T_RPAREN = 203,      // )
-        T_MUL = 204,         // *
-        T_PLUS = 205,        // +
-        T_MINUS = 207,       // -
-        T_DIV_EQ = 208,      // /=
-        T_COLON = 209,       // :
-        T_SEMICOLON = 210,   // ;
-        T_LSHIFT = 211,      // <<
-        T_EQ = 212,          // =
-        T_RSHIFT = 213,      // >>
-        T_LBRACKET = 214,    // [
-        T_RBRACKET = 215,    // ]
-        T_LBRACE = 216,      // {
-        T_OR = 217,          // |
-        T_OR_OR = 218,       // ||
-        T_RBRACE = 219,      // }
-        T_pit = 206,      // }
+        T_WHILE = 107,
+        T_main = 106,
+        T_int = 105,
+
+        T_EQ_EQ = 214,//==
+        T_ne_EQ = 200,//!=
+
+        T_QUOTE = 201,      // "
+        T_AND = 202,         // &
+        T_LPAREN = 203,      // (
+        T_RPAREN = 204,      // )
+        T_MUL = 205,         // *
+        T_PLUS = 206,        // +
+        T_MINUS = 208,       // -
+        T_DIV_EQ = 209,      // /=
+        T_COLON = 210,       // :
+        T_SEMICOLON = 211,   // ;
+        T_LSHIFT = 212,      // <<
+        T_EQ = 213,          // =
+        T_RSHIFT = 215,      // >>
+        T_LBRACKET = 216,    // [
+        T_RBRACKET = 217,    // ]
+        T_LBRACE = 218,      // {
+        T_OR = 219,          // |
+        T_OR_OR = 220,       // ||
+        T_RBRACE = 221,      // }
+        T_COMMA = 207,      // ,
         T_ID = 30,           // Идентификаторы
         T_NUM = 40,           // Числовые константы
         
@@ -97,8 +102,13 @@ public:
         std::stack<Symbol>& symbols,
         size_t& pos);
     const std::vector<std::string>& getErrors() const;
+    void writePostfixToFile(const std::string& postfixExpr, std::ofstream postfixFile);
 
 private:
+    std::string toPostfix(const std::vector<Token>& exprTokens);
+    int precedence(const Token& token);
+
+    std::string join(const std::vector<std::string>& vec, const std::string& delim);
     const std::vector<Token>& tokens;
     HashTable& hashTable;
     std::vector<std::string> errors;
@@ -113,6 +123,8 @@ private:
     int getTerminalCode(const Token& token) const;
     std::string getTerminalName(int term) const;
     void handleError(const Token& token, int state);
+    bool lookahead(int offset);
+
 };
 
 #endif

@@ -4,3 +4,72 @@ Unexpected while, expected: else, unknown
 Unexpected while, expected: else, unknown
 Unexpected while, expected: else, unknown
 Unexpected while, expected: else, unknown
+Unexpected {, expected: identifier, if
+Unexpected while, expected: else, unknown
+Unexpected (, expected: identifier, unknown, if, while
+Unexpected a, expected: {
+Unexpected (, expected: identifier, unknown, if, while
+Unexpected while, expected: else, unknown
+Unexpected else{, expected: identifier, unknown, if, while
+Unexpected else, expected: identifier, unknown, if, while
+Unexpected break;, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: identifier, if, }
+Unexpected ;, expected: continue
+Unexpected }, expected: identifier, number, ;, continue, +, break
+Unexpected continue, expected: 
+Unexpected continue, expected: 
+Unexpected break, expected: =
+Unexpected break, expected: identifier, if, }
+Unexpected }, expected: identifier, number, ;, continue, +, break
+Unexpected break, expected: identifier, if, }
+Unexpected }, expected: identifier, number, ;, continue, +, break
+Unexpected break, expected: =
+Unexpected break, expected: =
+Unexpected ;, expected: =
+Unexpected break, expected: =
+Unexpected break, expected: =
+Unexpected break, expected: =
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: =
+Unexpected break, expected: identifier, if, }
+Unexpected break, expected: {
+Unexpected continue, expected: ;
+Unexpected }, expected: identifier, number, ;, continue, +, break
+Unexpected break, expected: identifier, if, }
+Unexpected b, expected: 
+Unexpected while, expected: else, unknown
+Unexpected continue, expected: ;
+Unexpected continue, expected: ;
+Unexpected if, expected: identifier, number
+Unexpected /=, expected: &, |, ||
+Unexpected !=, expected: unknown, &, |, ||
+Unexpected (, expected: (
+Unexpected &, expected: +
+Unexpected &, expected: +
+Unexpected ), expected: unknown, |, ||, &
+Unexpected ||, expected: +, -, *, >>, <<
+Unexpected ), expected: |, <<, ||, &, +, -, *, >>
+Unexpected /=, expected: =
+Unexpected break, expected: identifier, if, }
+Unexpected main, expected: =, /=
+Unexpected a, expected: {
+Unexpected a, expected: {
+Unexpected while, expected: }
+Unexpected a, expected: }
+Unexpected a, expected: }
+Unexpected -, expected: +, identifier, number, ;
+Unexpected -, expected: +, identifier, number, ;
+Unexpected c;, expected: number, identifier
+Unexpected -, expected: +, identifier, number, ;
+Unexpected ;, expected: =, /=
+Unexpected a, expected: {
+Unexpected a, expected: {
+Unexpected a, expected: {
+Unexpected a, expected: {
+Unexpected int, expected: identifier, unknown
+Unexpected c;, expected: number, identifier

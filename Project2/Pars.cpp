@@ -1,6 +1,102 @@
 ﻿#include "Pars.h"
 #include <iostream>
 #include <fstream>
+#include <stack>
+#include <vector>
+#include <unordered_map>
+#include <string>
+
+// Обновленный метод Parser::toPostfix
+// Обновленный метод Parser::toPostfix
+int Parser::precedence(const Token& token) {
+    switch (getTerminalCode(token)) {
+    case T_PLUS:
+    case T_MINUS: return 2;
+    case T_MUL: return 3;
+    case T_EQ: return 1; // Присваивание имеет наименьший приоритет
+    default: return 0;
+    }
+}
+
+std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
+    std::stack<Token> operators;
+    std::vector<Token> output;
+    Token leftOperand;
+    bool hasAssignment = false;
+
+    for (const Token& token : exprTokens) {
+        int terminalCode = getTerminalCode(token);
+
+        if (terminalCode == T_NUM || terminalCode == T_ID) {
+            output.push_back(token);
+        }
+        else if (terminalCode == T_PLUS || terminalCode == T_MINUS ||
+            terminalCode == T_MUL) {
+            while (!operators.empty() &&
+                getTerminalCode(operators.top()) != T_LPAREN &&
+                precedence(operators.top()) >= precedence(token)) {
+                output.push_back(operators.top());
+                operators.pop();
+            }
+            operators.push(token);
+        }
+        else if (terminalCode == T_EQ) {
+            // Запоминаем левый операнд для присваивания
+            if (!output.empty()) {
+                leftOperand = output.back();
+                output.pop_back();
+                hasAssignment = true;
+            }
+            // Не добавляем '=' в стек, обработаем его в конце
+        }
+        else if (terminalCode == T_LPAREN) {
+            operators.push(token);
+        }
+        else if (terminalCode == T_RPAREN) {
+            while (!operators.empty() && getTerminalCode(operators.top()) != T_LPAREN) {
+                output.push_back(operators.top());
+                operators.pop();
+            }
+            if (!operators.empty()) {
+                operators.pop();
+            }
+        }
+    }
+
+    // Добавляем оставшиеся операторы
+    while (!operators.empty()) {
+        output.push_back(operators.top());
+        operators.pop();
+    }
+
+    // Добавляем присваивание в конец, если оно было
+    if (hasAssignment) {
+        output.push_back(leftOperand);
+        output.push_back(Token{ "=",20 , 0, 0, 0 });
+    }
+
+    // Формируем строку результата
+    std::string postfixExpr;
+    for (const auto& token : output) {
+        postfixExpr += token.value + " ";
+    }
+
+    if (!postfixExpr.empty()) {
+        postfixExpr.pop_back();
+    }
+
+    return postfixExpr;
+}
+
+void Parser::writePostfixToFile(const std::string& postfixExpr, std::ofstream postfixFile) {
+    if (postfixFile.is_open()) {
+        postfixFile << postfixExpr << std::endl; // Записываем постфиксное выражение на новой строке
+        postfixFile.close(); // Закрываем файл
+    }
+    else {
+        std::cerr << "Unable to open postfix file!" << std::endl; // Если не удалось открыть файл
+    }
+}
 
 Parser::Parser(const std::vector<Token>& tokens, HashTable& hashTable)
     : tokens(tokens), hashTable(hashTable) {
@@ -17,7 +113,7 @@ void Parser::init_Product() {
     productions = {
         // Основные правила
         {PROGRAM, 1},          //0 program → stmt_list
-        {STMT_LIST, 3},        // 1stmt_list → stmt stmt_list
+        {STMT_LIST, 2},        // 1stmt_list → stmt stmt_list
         {STMT_LIST, 0},        // 2stmt_list → ε
         {STMT, 4},             // 3stmt → id = expr ;
         {STMT, 3},             // 4stmt → block
@@ -48,14 +144,74 @@ void Parser::init_Product() {
 //таблица с тем что может стоять и где
 
 void Parser::init_actionTable() {
+    //main 
+    actionTable[1][T_int] = { Action::SHIFT, 2 };      // a
+    actionTable[2][T_main] = { Action::SHIFT, 3 };      // a
+    actionTable[3][T_LPAREN] = { Action::SHIFT, 4 };      // (
+    actionTable[4][T_RPAREN] = { Action::SHIFT, 5 };      // )
+    actionTable[5][T_LBRACE] = { Action::SHIFT, 0 };      // {
+    actionTable[6][T_RBRACE] = { Action::ACCEPT, 0 };      // }
+
     // Начальные состояния
     actionTable[0][T_ID] = { Action::SHIFT, 10 };      // a
     actionTable[0][T_IF] = { Action::SHIFT, 20 };      // if
-    actionTable[0][T_WHILE] = { Action::SHIFT, 20 };  //while
+    actionTable[0][T_WHILE] = { Action::SHIFT, 40 };  //while
     actionTable[0][T_EOF] = { Action::ACCEPT, 0 };
+    actionTable[0][T_RBRACE] = { Action::SHIFT, 6 };      // }
 
+    //while 
+    // Условный оператор
+    actionTable[40][T_LPAREN] = { Action::SHIFT, 41 };   // (
+    actionTable[41][T_ID] = { Action::SHIFT, 42 };       // a
+
+    actionTable[42][T_ne_EQ] = { Action::SHIFT, 49 };      // a !=
+    actionTable[42][T_EQ_EQ] = { Action::SHIFT, 49 };// a= =
+
+    actionTable[49][T_ID] = { Action::SHIFT, 50 };      // b
+    actionTable[49][T_NUM] = { Action::SHIFT, 50 };      // 4
+
+    actionTable[50][T_RPAREN] = { Action::SHIFT, 45 };    // )
+
+    actionTable[50][T_OR] = { Action::SHIFT,41 };      // |
+    actionTable[50][T_OR_OR] = { Action::SHIFT,41 };      // ||
+    actionTable[50][T_AND] = { Action::SHIFT,41 };      // &
+    actionTable[50][T_PLUS] = { Action::SHIFT, 51 };      // 4
+    actionTable[50][T_MINUS] = { Action::SHIFT, 51 };      // 4
+    actionTable[50][T_MUL] = { Action::SHIFT, 51 };      // 4
+    actionTable[50][T_RSHIFT] = { Action::SHIFT, 51 };      // 4
+    actionTable[50][T_LSHIFT] = { Action::SHIFT, 51 };      // 4
+
+    actionTable[51][T_NUM] = { Action::SHIFT, 42 };      // 4
+    actionTable[51][T_ID] = { Action::SHIFT, 42 };      // b
+
+    actionTable[42][T_OR] = { Action::SHIFT,41 };      // |
+    actionTable[42][T_OR_OR] = { Action::SHIFT,41 };      // ||
+    actionTable[42][T_AND] = { Action::SHIFT,41 };      // &
+
+    actionTable[42][T_RPAREN] = { Action::SHIFT, 45 };    // )
+
+    actionTable[45][T_LBRACE] = { Action::SHIFT, 46 };    // {
+
+    // Добавляем ожидание stmt_list после {
+    actionTable[46][T_ID] = { Action::SHIFT, 10 };      // a
+    actionTable[46][T_IF] = { Action::SHIFT, 20 };      // if
+    actionTable[46][T_WHILE] = { Action::SHIFT, 40 };  //while
+    actionTable[46][T_BREAK] = { Action::SHIFT, 48 };  //break
+    actionTable[46][T_CONTINUE] = { Action::SHIFT, 48 };//cont
+
+    actionTable[48][T_SEMICOLON] = { Action::REDUCE, 1 };//cont;
+    // Теперь, когда мы видим stmt внутри блока
+    actionTable[47][T_EQ] = { Action::SHIFT, 11 };        // a =
+    actionTable[47][T_DIV_EQ] = { Action::SHIFT, 11 };      // a /=
+
+    // Закрытие блока
+    actionTable[46][T_RBRACE] = { Action::SHIFT, 0 };    // Закрываем блок }
+
+    //stroki 
     // Присваивание
     actionTable[10][T_EQ] = { Action::SHIFT, 11 };      // a =
+    actionTable[10][T_DIV_EQ] = { Action::SHIFT, 11 };      //  a /=
+
 
     actionTable[11][T_ID] = { Action::SHIFT, 12 };      // b
     actionTable[11][T_NUM] = { Action::SHIFT, 12 };      // 4
@@ -68,18 +224,45 @@ void Parser::init_actionTable() {
     actionTable[13][T_ID] = { Action::REDUCE, 6 };      // b
 
     actionTable[12][T_PLUS] = { Action::SHIFT, 13 };    // b +
+    actionTable[12][T_MINUS] = { Action::SHIFT, 13 };    // b -
+    actionTable[12][T_MUL] = { Action::SHIFT, 13 };    // b *
+    actionTable[12][T_RSHIFT] = { Action::SHIFT, 13 };    // b >>
+    actionTable[12][T_LSHIFT] = { Action::SHIFT, 13 };    // b <<
 
-    actionTable[14][T_SEMICOLON] = { Action::REDUCE, 16 }; // a = b + c;
 
+    //if 
     // Условный оператор
-    actionTable[20][T_LPAREN] = { Action::SHIFT, 21 };   // (
+
+    actionTable[20][T_LPAREN] = { Action::SHIFT,21 };   // (
     actionTable[21][T_ID] = { Action::SHIFT, 22 };       // a
-    actionTable[22][T_OR] = { Action::SHIFT, 23 };      // |
-    actionTable[23][T_ID] = { Action::SHIFT, 24 };       // b
-    actionTable[24][T_pit] = { Action::REDUCE, 16 };    // ,
-    actionTable[24][T_RPAREN] = { Action::SHIFT, 25 };    // )
+
+    actionTable[22][T_ne_EQ] = { Action::SHIFT, 29 };      // a !=
+    actionTable[22][T_EQ_EQ] = { Action::SHIFT, 29 };// a= =
+
+    actionTable[29][T_ID] = { Action::SHIFT, 60 };      // b
+    actionTable[29][T_NUM] = { Action::SHIFT, 60 };      // 4
+
+    actionTable[60][T_RPAREN] = { Action::SHIFT, 25 };    // )
+    actionTable[60][T_OR] = { Action::SHIFT,21 };      // |
+    actionTable[60][T_OR_OR] = { Action::SHIFT,21 };      // ||
+    actionTable[60][T_AND] = { Action::SHIFT,21 };      // &
+    actionTable[60][T_PLUS] = { Action::SHIFT, 61 };      // 4
+    actionTable[60][T_MINUS] = { Action::SHIFT, 61 };      // 4
+    actionTable[60][T_MUL] = { Action::SHIFT, 61 };      // 4
+    actionTable[60][T_RSHIFT] = { Action::SHIFT, 61 };      // 4
+    actionTable[60][T_LSHIFT] = { Action::SHIFT, 61 };      // 4
+
+    actionTable[61][T_NUM] = { Action::SHIFT, 22 };      // 4
+    actionTable[61][T_ID] = { Action::SHIFT, 22 };      // b
+
+    actionTable[22][T_OR] = { Action::SHIFT,21 };      // |
+    actionTable[22][T_OR_OR] = { Action::SHIFT,21 };      // ||
+    actionTable[22][T_AND] = { Action::SHIFT,21 };      // &
+
+    actionTable[22][T_RPAREN] = { Action::SHIFT, 25 };    // )
 
     actionTable[25][T_LBRACE] = { Action::SHIFT, 26 };    // {
+
 
     // Добавляем ожидание stmt_list после {
     actionTable[26][T_ID] = { Action::SHIFT, 27 };        // Ожидаем stmt внутри блока
@@ -87,6 +270,7 @@ void Parser::init_actionTable() {
 
     // Теперь, когда мы видим stmt внутри блока
     actionTable[27][T_EQ] = { Action::SHIFT, 11 };        // stmt → id = expr;
+    actionTable[27][T_DIV_EQ] = { Action::SHIFT, 11 };        // stmt → id = expr;
 
     // Закрытие блока
     actionTable[26][T_RBRACE] = { Action::SHIFT, 28 };    // Закрываем блок }
@@ -103,7 +287,8 @@ void Parser::init_gotoTable() {
     gotoTable[0][BLOCK] = { Action::GOTO, 0 };      // Переход на блок
     gotoTable[6][EXPR] = { Action::GOTO, 6 };  // ф+и
     gotoTable[16][STMT] = { Action::GOTO, 3 };  // а=и
-    
+    gotoTable[1][STMT] = { Action::GOTO, 3 };  // a;
+
 }
 
 
@@ -196,46 +381,101 @@ const std::vector<std::string>& Parser::getErrors() const {
 bool Parser::parse() {
     std::stack<int> states;
     std::stack<Symbol> symbols;
+    std::vector<Token> expressionTokens;
+    std::ofstream postfixFile("postfix.txt");
+
     states.push(0);
-
-    size_t pos = 0;
-    while (pos < tokens.size()) {
-        int state = states.top();
-        const Token token = pos < tokens.size() ? tokens[pos] : Token{ "$", T_EOF, -1, -1, -1 };
-        int term = getTerminalCode(token);
-
-        // Отладочный вывод
-        std::cout << "State: " << state << ", Token: " << token.value
-            << " (type: " << token.tableType << ", index: " << token.index << ")\n";
-
-        if (term == T_SEMICOLON) {
-            // Если в текущем состоянии есть reduce по stmt → id = expr
-            if (state == 12) {
-                executeAction({ Action::REDUCE, 3 }, states, symbols, pos);
-                continue;
+    if (tokens.size() >= 5 &&
+        tokens[0].value == "int" &&
+        tokens[1].value =="main" &&
+        tokens[2].value == "(" &&
+        tokens[3].value == ")") {
+        size_t pos = 0;
+        // Обрабатываем заголовок main
+        executeAction({ Action::SHIFT, 1 }, states, symbols, pos); // int
+        executeAction({ Action::SHIFT, 2 }, states, symbols, pos); // main
+        executeAction({ Action::SHIFT, 3 }, states, symbols, pos); // (
+        executeAction({ Action::SHIFT, 4 }, states, symbols, pos); // )
+        executeAction({ Action::SHIFT, 5 }, states, symbols, pos); // {
+        states.push(0);
+        while (pos < tokens.size()) {
+            int state = states.top();
+            const Token token = pos < tokens.size() ? tokens[pos] : Token{ "$", T_EOF, -1, -1, -1 };
+            int term = getTerminalCode(token);
+            // Обработка токенов выражений
+            auto a = getTerminalCode(token);
+            if (a == T_PLUS || a == T_MINUS ||
+                a == T_MUL || a == T_DIV_EQ ||
+                a == T_ID || a == T_NUM ||
+                a == T_EQ) {
+                expressionTokens.push_back(token); // Добавляем токены для постфиксного выражения
             }
-            // Если в стеке есть stmt, переходим к stmt_list
-            else if (!symbols.empty() && symbols.top().type == Symbol::NON_TERMINAL && symbols.top().nt == STMT) {
-                executeAction({ Action::REDUCE, 1 }, states, symbols, pos);  // stmt_list → stmt ; stmt_list
-                continue;
+            if (state == 28) {
+                if (term == T_ELSE) {
+                    // Если следующий токен - 'else', выполняем переход в состояние 25
+                    executeAction({ Action::SHIFT, 25 }, states, symbols, pos);
+                    continue; // Переходим к следующей итерации
+                }
+                else {
+                    states.push(0);
+                    continue;
+                }
             }
-        }
+            // Отладочный вывод
+            std::cout << "State: " << state << ", Token: " << token.value
+                << " (type: " << token.tableType << ", index: " << token.index << ")\n";
 
-        auto stateActions = actionTable.find(state);
-        if (stateActions == actionTable.end()) {
-            handleError(token, state);
-            return false;
-        }
+            if (term == T_SEMICOLON) {
+                // Если в текущем состоянии есть reduce по stmt → id = expr
+                if (state == 12) {
+                    executeAction({ Action::REDUCE, 3 }, states, symbols, pos);
+                    std::string postfixExpr = toPostfix(expressionTokens);
+                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    expressionTokens.clear();
+                    continue;
+                }
+                // Если в стеке есть stmt, переходим к stmt_list
+                else if (!symbols.empty() && symbols.top().type == Symbol::NON_TERMINAL && symbols.top().nt == STMT) {
+                    executeAction({ Action::REDUCE, 1 }, states, symbols, pos);  // stmt_list → stmt ; stmt_list
+                    std::string postfixExpr = toPostfix(expressionTokens);
+                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    expressionTokens.clear();
+                    continue;
+                }
 
-        auto actionIt = stateActions->second.find(term);
-        if (actionIt == stateActions->second.end()) {
-            handleError(token, state);
-            return false;
-        }
+            }
 
-        executeAction(actionIt->second, states, symbols, pos);
+            auto stateActions = actionTable.find(state);
+            if (stateActions == actionTable.end()) {
+                handleError(token, state);
+                return false;
+            }
+
+            auto actionIt = stateActions->second.find(term);
+            if (actionIt == stateActions->second.end()) {
+                handleError(token, state);
+                return false;
+            }
+
+
+            if (tokens[pos].value == "}") {
+                executeAction({ Action::SHIFT, 6 }, states, symbols, pos); // }
+
+                // Проверяем, что это конец программы
+                if (pos + 1 >= tokens.size() || tokens[pos + 1].tableType == T_EOF) {
+                    executeAction({ Action::ACCEPT, 0 }, states, symbols, pos);
+
+                    // После успешного парсинга
+
+                    return true; // Завершаем парсинг
+                }
+            }
+            executeAction(actionIt->second, states, symbols, pos);
+            // Обработка токенов выражений
+           
+        }
+        return true;
     }
-    return true;
 }
 
 void Parser::handleError(const Token& token, int state) {
@@ -320,7 +560,7 @@ std::string Parser::getTerminalName(int term) const {
     case T_ID: return "identifier";
     case T_NUM: return "number";
 
-    case T_pit: return ",";
+    case T_COMMA: return ",";
     default: return "unknown";
     }
 }

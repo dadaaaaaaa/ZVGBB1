@@ -1,11 +1,5 @@
- a = b ;
- a = b + c + c ;
- if ( a | b ) {
- a = b ; 
- a = a + b ;
- } else {
- a = c ;
- } 
- while ( a | b ) {
-  a = a + b ;
+ int main ( ) { 
+	a = b + c ;
+	a = b + c ;
+
  }

@@ -3,4 +3,6 @@ continue
 do
 else
 if
+int
+main
 while
