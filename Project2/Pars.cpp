@@ -10,85 +10,83 @@
 // Обновленный метод Parser::toPostfix
 int Parser::precedence(const Token& token) {
     switch (getTerminalCode(token)) {
-    case T_PLUS:
-    case T_MINUS: return 2;
-    case T_MUL: return 3;
-    case T_EQ: return 1; // Присваивание имеет наименьший приоритет
+    case T_OR_OR: return 1;
+    case T_AND: return 2;
+    case T_EQ_EQ: case T_ne_EQ: return 3;
+    case T_PLUS: case T_MINUS: return 4;
+    case T_MUL: return 5;
+    case T_EQ: return 6; // Присваивание имеет самый низкий приоритет
     default: return 0;
     }
 }
-
+bool Parser::isOperator(int terminalCode) {
+    return terminalCode == T_PLUS || terminalCode == T_MINUS ||
+        terminalCode == T_MUL || terminalCode == T_EQ ||
+        terminalCode == T_EQ_EQ || terminalCode == T_ne_EQ ||
+        terminalCode == T_OR_OR || terminalCode == T_AND;
+}
 std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
     std::stack<Token> operators;
-    std::vector<Token> output;
-    Token leftOperand;
-    bool hasAssignment = false;
+    std::vector<std::string> output; // Будем хранить только значения
+    std::string conditionKeyword; // Для хранения if/while
 
     for (const Token& token : exprTokens) {
         int terminalCode = getTerminalCode(token);
 
-        if (terminalCode == T_NUM || terminalCode == T_ID) {
-            output.push_back(token);
+        // Сохраняем if/while для добавления в конце
+        if (terminalCode == T_IF || terminalCode == T_WHILE) {
+            conditionKeyword = token.value;
+            continue;
         }
-        else if (terminalCode == T_PLUS || terminalCode == T_MINUS ||
-            terminalCode == T_MUL) {
+
+        if (terminalCode == T_NUM || terminalCode == T_ID) {
+            output.push_back(token.value);
+        }
+        else if (isOperator(terminalCode)) {
             while (!operators.empty() &&
                 getTerminalCode(operators.top()) != T_LPAREN &&
                 precedence(operators.top()) >= precedence(token)) {
-                output.push_back(operators.top());
+                output.push_back(operators.top().value);
                 operators.pop();
             }
             operators.push(token);
-        }
-        else if (terminalCode == T_EQ) {
-            // Запоминаем левый операнд для присваивания
-            if (!output.empty()) {
-                leftOperand = output.back();
-                output.pop_back();
-                hasAssignment = true;
-            }
-            // Не добавляем '=' в стек, обработаем его в конце
         }
         else if (terminalCode == T_LPAREN) {
             operators.push(token);
         }
         else if (terminalCode == T_RPAREN) {
-            while (!operators.empty() && getTerminalCode(operators.top()) != T_LPAREN) {
-                output.push_back(operators.top());
+            while (!operators.empty() &&
+                getTerminalCode(operators.top()) != T_LPAREN) {
+                output.push_back(operators.top().value);
                 operators.pop();
             }
-            if (!operators.empty()) {
-                operators.pop();
-            }
+            if (!operators.empty()) operators.pop();
         }
     }
 
     // Добавляем оставшиеся операторы
     while (!operators.empty()) {
-        output.push_back(operators.top());
+        output.push_back(operators.top().value);
         operators.pop();
     }
 
-    // Добавляем присваивание в конец, если оно было
-    if (hasAssignment) {
-        output.push_back(leftOperand);
-        output.push_back(Token{ "=",20 , 0, 0, 0 });
+    // Добавляем if/while в конец, если они были
+    if (!conditionKeyword.empty()) {
+        output.push_back(conditionKeyword);
     }
 
-    // Формируем строку результата
-    std::string postfixExpr;
-    for (const auto& token : output) {
-        postfixExpr += token.value + " ";
+    // Объединяем результат
+    std::string result;
+    for (const auto& val : output) {
+        result += val + " ";
     }
+    if (!result.empty()) result.pop_back();
 
-    if (!postfixExpr.empty()) {
-        postfixExpr.pop_back();
-    }
-
-    return postfixExpr;
+    return result;
 }
 
-void Parser::writePostfixToFile(const std::string& postfixExpr, std::ofstream postfixFile) {
+void Parser::writePostfixToFile(const std::string& postfixExpr) {
+    std::ofstream postfixFile("postfix.txt", std::ios::app);
     if (postfixFile.is_open()) {
         postfixFile << postfixExpr << std::endl; // Записываем постфиксное выражение на новой строке
         postfixFile.close(); // Закрываем файл
@@ -382,12 +380,11 @@ bool Parser::parse() {
     std::stack<int> states;
     std::stack<Symbol> symbols;
     std::vector<Token> expressionTokens;
-    std::ofstream postfixFile("postfix.txt");
 
     states.push(0);
     if (tokens.size() >= 5 &&
         tokens[0].value == "int" &&
-        tokens[1].value =="main" &&
+        tokens[1].value == "main" &&
         tokens[2].value == "(" &&
         tokens[3].value == ")") {
         size_t pos = 0;
@@ -402,12 +399,13 @@ bool Parser::parse() {
             int state = states.top();
             const Token token = pos < tokens.size() ? tokens[pos] : Token{ "$", T_EOF, -1, -1, -1 };
             int term = getTerminalCode(token);
-            // Обработка токенов выражений
             auto a = getTerminalCode(token);
-            if (a == T_PLUS || a == T_MINUS ||
-                a == T_MUL || a == T_DIV_EQ ||
-                a == T_ID || a == T_NUM ||
-                a == T_EQ) {
+            auto terminalCode = getTerminalCode(token);
+
+            if (terminalCode == T_PLUS || terminalCode == T_MINUS ||
+                terminalCode == T_MUL || terminalCode == T_EQ ||
+                terminalCode == T_EQ_EQ || terminalCode == T_ne_EQ ||
+                terminalCode == T_OR_OR || terminalCode == T_AND || terminalCode == T_ID || terminalCode == T_NUM || terminalCode == T_WHILE || terminalCode == T_IF) {
                 expressionTokens.push_back(token); // Добавляем токены для постфиксного выражения
             }
             if (state == 28) {
@@ -424,13 +422,17 @@ bool Parser::parse() {
             // Отладочный вывод
             std::cout << "State: " << state << ", Token: " << token.value
                 << " (type: " << token.tableType << ", index: " << token.index << ")\n";
-
+            if (term == T_LBRACE) {
+                std::string postfixExpr = toPostfix(expressionTokens);
+                writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
+                expressionTokens.clear();
+            }
             if (term == T_SEMICOLON) {
                 // Если в текущем состоянии есть reduce по stmt → id = expr
                 if (state == 12) {
                     executeAction({ Action::REDUCE, 3 }, states, symbols, pos);
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
@@ -438,11 +440,10 @@ bool Parser::parse() {
                 else if (!symbols.empty() && symbols.top().type == Symbol::NON_TERMINAL && symbols.top().nt == STMT) {
                     executeAction({ Action::REDUCE, 1 }, states, symbols, pos);  // stmt_list → stmt ; stmt_list
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
-
             }
 
             auto stateActions = actionTable.find(state);
@@ -457,22 +458,16 @@ bool Parser::parse() {
                 return false;
             }
 
-
-            if (tokens[pos].value == "}") {
+            executeAction(actionIt->second, states, symbols, pos);
+            if (pos < tokens.size() && tokens[pos].value == "}") {
                 executeAction({ Action::SHIFT, 6 }, states, symbols, pos); // }
 
                 // Проверяем, что это конец программы
                 if (pos + 1 >= tokens.size() || tokens[pos + 1].tableType == T_EOF) {
                     executeAction({ Action::ACCEPT, 0 }, states, symbols, pos);
-
-                    // После успешного парсинга
-
-                    return true; // Завершаем парсинг
+                    return true;
                 }
             }
-            executeAction(actionIt->second, states, symbols, pos);
-            // Обработка токенов выражений
-           
         }
         return true;
     }

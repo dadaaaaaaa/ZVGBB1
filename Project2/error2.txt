@@ -73,3 +73,6 @@ Unexpected a, expected: {
 Unexpected a, expected: {
 Unexpected int, expected: identifier, unknown
 Unexpected c;, expected: number, identifier
+Unexpected {, expected: identifier, unknown, if, while, }
+Unexpected {, expected: identifier, unknown, if, while, }
+Unexpected =, expected: unknown, unknown, |, ), ||, &

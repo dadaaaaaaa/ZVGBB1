@@ -102,7 +102,7 @@ public:
         std::stack<Symbol>& symbols,
         size_t& pos);
     const std::vector<std::string>& getErrors() const;
-    void writePostfixToFile(const std::string& postfixExpr, std::ofstream postfixFile);
+    void writePostfixToFile(const std::string& postfixExpr);
 
 private:
     std::string toPostfix(const std::vector<Token>& exprTokens);
@@ -124,7 +124,7 @@ private:
     std::string getTerminalName(int term) const;
     void handleError(const Token& token, int state);
     bool lookahead(int offset);
-
+    bool isOperator(int terminalCode);
 };
 
 #endif

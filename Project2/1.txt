@@ -1,5 +1,6 @@
- int main ( ) { 
-	a = b + c ;
-	a = b + c ;
+ int main ( ) {
 
- }
+ if ( a == b || a == b ) {
+ a = b + d ; 
+ a = a + b ;
+ } }
