@@ -1,6 +1,5 @@
- int main ( ) {
-
- if ( a == b || a == b ) {
- a = b + d ; 
- a = a + b ;
- } }
+a = 4 
+b = 2 
+while ( a || b ) {
+	a = b 
+}

@@ -8,6 +8,8 @@
 
 // Обновленный метод Parser::toPostfix
 // Обновленный метод Parser::toPostfix
+std::ofstream postfixFile("postfix.txt");
+
 int Parser::precedence(const Token& token) {
     switch (getTerminalCode(token)) {
     case T_OR_OR: return 1;
@@ -86,7 +88,6 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
 }
 
 void Parser::writePostfixToFile(const std::string& postfixExpr) {
-    std::ofstream postfixFile("postfix.txt", std::ios::app);
     if (postfixFile.is_open()) {
         postfixFile << postfixExpr << std::endl; // Записываем постфиксное выражение на новой строке
         postfixFile.close(); // Закрываем файл
