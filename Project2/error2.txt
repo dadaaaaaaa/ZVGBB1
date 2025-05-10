@@ -76,3 +76,18 @@ Unexpected c;, expected: number, identifier
 Unexpected {, expected: identifier, unknown, if, while, }
 Unexpected {, expected: identifier, unknown, if, while, }
 Unexpected =, expected: unknown, unknown, |, ), ||, &
+Unexpected ==, expected: identifier, number
+Unexpected ||, expected: identifier, number
+Unexpected ==, expected: ||, ), |, &, +, -, *, >>, <<
+Unexpected ==, expected: ||, ), |, &, +, -, *, >>, <<
+Unexpected else, expected: identifier, unknown, if, while, }
+Unexpected else, expected: }
+Unexpected a, expected: =, /=
+Unexpected else, expected: }
+Unexpected else, expected: }
+Unexpected else, expected: }
+Unexpected a, expected: =, /=
+Unexpected ==, expected: ||, ), |, &, +, -, *, >>, <<
+Unexpected ;, expected: ||, ), |, &, +, -, *, >>, <<
+Unexpected a, expected: {
+Unexpected ;, expected: ||, ), |, &, +, -, *, >>, <<

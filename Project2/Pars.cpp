@@ -8,8 +8,6 @@
 
 // Обновленный метод Parser::toPostfix
 // Обновленный метод Parser::toPostfix
-std::ofstream postfixFile("postfix.txt");
-
 int Parser::precedence(const Token& token) {
     switch (getTerminalCode(token)) {
     case T_OR_OR: return 1;
@@ -36,7 +34,7 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
         int terminalCode = getTerminalCode(token);
 
         // Сохраняем if/while для добавления в конце
-        if (terminalCode == T_IF || terminalCode == T_WHILE) {
+        if (terminalCode == T_IF || terminalCode == T_WHILE || terminalCode == T_ELSE) {
             conditionKeyword = token.value;
             continue;
         }
@@ -87,10 +85,9 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
     return result;
 }
 
-void Parser::writePostfixToFile(const std::string& postfixExpr) {
+void Parser::writePostfixToFile(const std::string& postfixExpr, std::ofstream& postfixFile) {
     if (postfixFile.is_open()) {
         postfixFile << postfixExpr << std::endl; // Записываем постфиксное выражение на новой строке
-        postfixFile.close(); // Закрываем файл
     }
     else {
         std::cerr << "Unable to open postfix file!" << std::endl; // Если не удалось открыть файл
@@ -120,14 +117,14 @@ void Parser::init_Product() {
         {EXPR, 3},             // 6expr → expr + term
         {EXPR, 1},             // 7expr → term
         {TERM, 1},             // 8term → factor
-        {FACTOR, 3},           // 9factor → id
-          {FACTOR, 3},           //10 factor → id
-            {FACTOR, 3},           // 11factor → id
-              {FACTOR, 3},           // 12factor → id
-                {FACTOR, 3},           // 13factor → id
-                  {FACTOR, 3},           // 14factor → id
-                    {FACTOR, 3},           // 15factor → id
-                      {FACTOR, 5},           // 16factor → id
+        {FACTOR, 3},           // 9factor → id-
+          {FACTOR, 3},           //10 factor → id-
+            {FACTOR, 3},           // 11factor → id-
+              {FACTOR, 3},           // 12factor → id-
+                {FACTOR, 3},           // 13factor → id-
+                  {FACTOR, 3},           // 14factor → id-
+                    {FACTOR, 3},           // 15factor → id-
+                      {FACTOR, 5},           // 16factor → id.....использеться 
                         {FACTOR, 3},           // factor → id
                           {FACTOR, 3},           // factor → id
                             {FACTOR, 3},           // factor → id
@@ -245,14 +242,15 @@ void Parser::init_actionTable() {
     actionTable[60][T_OR] = { Action::SHIFT,21 };      // |
     actionTable[60][T_OR_OR] = { Action::SHIFT,21 };      // ||
     actionTable[60][T_AND] = { Action::SHIFT,21 };      // &
+
     actionTable[60][T_PLUS] = { Action::SHIFT, 61 };      // 4
     actionTable[60][T_MINUS] = { Action::SHIFT, 61 };      // 4
     actionTable[60][T_MUL] = { Action::SHIFT, 61 };      // 4
     actionTable[60][T_RSHIFT] = { Action::SHIFT, 61 };      // 4
     actionTable[60][T_LSHIFT] = { Action::SHIFT, 61 };      // 4
 
-    actionTable[61][T_NUM] = { Action::SHIFT, 22 };      // 4
-    actionTable[61][T_ID] = { Action::SHIFT, 22 };      // b
+    actionTable[61][T_NUM] = { Action::SHIFT, 60 };      // 4
+    actionTable[61][T_ID] = { Action::SHIFT, 60 };      // b
 
     actionTable[22][T_OR] = { Action::SHIFT,21 };      // |
     actionTable[22][T_OR_OR] = { Action::SHIFT,21 };      // ||
@@ -381,7 +379,7 @@ bool Parser::parse() {
     std::stack<int> states;
     std::stack<Symbol> symbols;
     std::vector<Token> expressionTokens;
-
+    std::ofstream postfixFile("postfix.txt");
     states.push(0);
     if (tokens.size() >= 5 &&
         tokens[0].value == "int" &&
@@ -405,7 +403,7 @@ bool Parser::parse() {
 
             if (terminalCode == T_PLUS || terminalCode == T_MINUS ||
                 terminalCode == T_MUL || terminalCode == T_EQ ||
-                terminalCode == T_EQ_EQ || terminalCode == T_ne_EQ ||
+                terminalCode == T_EQ_EQ || terminalCode == T_ne_EQ || terminalCode == T_ELSE ||
                 terminalCode == T_OR_OR || terminalCode == T_AND || terminalCode == T_ID || terminalCode == T_NUM || terminalCode == T_WHILE || terminalCode == T_IF) {
                 expressionTokens.push_back(token); // Добавляем токены для постфиксного выражения
             }
@@ -425,7 +423,7 @@ bool Parser::parse() {
                 << " (type: " << token.tableType << ", index: " << token.index << ")\n";
             if (term == T_LBRACE) {
                 std::string postfixExpr = toPostfix(expressionTokens);
-                writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
+                writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
                 expressionTokens.clear();
             }
             if (term == T_SEMICOLON) {
@@ -433,7 +431,7 @@ bool Parser::parse() {
                 if (state == 12) {
                     executeAction({ Action::REDUCE, 3 }, states, symbols, pos);
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
+                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
@@ -441,7 +439,7 @@ bool Parser::parse() {
                 else if (!symbols.empty() && symbols.top().type == Symbol::NON_TERMINAL && symbols.top().nt == STMT) {
                     executeAction({ Action::REDUCE, 1 }, states, symbols, pos);  // stmt_list → stmt ; stmt_list
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr); // Записываем постфиксное выражение в файл
+                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
@@ -450,12 +448,16 @@ bool Parser::parse() {
             auto stateActions = actionTable.find(state);
             if (stateActions == actionTable.end()) {
                 handleError(token, state);
+                postfixFile.close(); // Закрываем файл
+
                 return false;
             }
 
             auto actionIt = stateActions->second.find(term);
             if (actionIt == stateActions->second.end()) {
                 handleError(token, state);
+                postfixFile.close(); // Закрываем файл
+
                 return false;
             }
 
@@ -466,10 +468,14 @@ bool Parser::parse() {
                 // Проверяем, что это конец программы
                 if (pos + 1 >= tokens.size() || tokens[pos + 1].tableType == T_EOF) {
                     executeAction({ Action::ACCEPT, 0 }, states, symbols, pos);
+                    postfixFile.close(); // Закрываем файл
+
                     return true;
                 }
             }
         }
+        postfixFile.close(); // Закрываем файл
+
         return true;
     }
 }

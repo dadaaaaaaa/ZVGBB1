@@ -102,9 +102,10 @@ public:
         std::stack<Symbol>& symbols,
         size_t& pos);
     const std::vector<std::string>& getErrors() const;
-    void writePostfixToFile(const std::string& postfixExpr);
 
 private:
+    void writePostfixToFile(const std::string& postfixExpr, std::ofstream& postfixFile);
+
     std::string toPostfix(const std::vector<Token>& exprTokens);
     int precedence(const Token& token);
 
