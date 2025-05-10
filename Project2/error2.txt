@@ -91,3 +91,4 @@ Unexpected ==, expected: ||, ), |, &, +, -, *, >>, <<
 Unexpected ;, expected: ||, ), |, &, +, -, *, >>, <<
 Unexpected a, expected: {
 Unexpected ;, expected: ||, ), |, &, +, -, *, >>, <<
+Unexpected ;, expected: ||, ), |, &, +, -, *, >>, <<

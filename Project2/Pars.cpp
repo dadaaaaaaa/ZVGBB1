@@ -5,7 +5,9 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-
+#include <set>
+#include <iomanip> // Для std::setw
+#include <algorithm> // Для std::max
 // Обновленный метод Parser::toPostfix
 // Обновленный метод Parser::toPostfix
 int Parser::precedence(const Token& token) {
@@ -376,6 +378,7 @@ const std::vector<std::string>& Parser::getErrors() const {
     return errors;
 }
 bool Parser::parse() {
+    generateFormattedLALRTableToFile("generated_lalr_table.txt");
     std::stack<int> states;
     std::stack<Symbol> symbols;
     std::vector<Token> expressionTokens;
@@ -532,7 +535,133 @@ int Parser::getTerminalCode(const Token& token) const {
     }
     return token.tableType;
 }
+void Parser::generateFormattedLALRTableToFile(const std::string& filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Unable to open file for writing LALR table: " << filename << std::endl;
+        return;
+    }
 
+    // Собираем все терминалы и нетерминалы
+    std::set<int> terminals;
+    std::set<int> nonTerminals;
+
+    for (const auto& stateEntry : actionTable) {
+        for (const auto& termEntry : stateEntry.second) {
+            terminals.insert(termEntry.first);
+        }
+    }
+
+    for (const auto& stateEntry : gotoTable) {
+        for (const auto& ntEntry : stateEntry.second) {
+            nonTerminals.insert(ntEntry.first);
+        }
+    }
+
+    // Определяем максимальную ширину столбцов
+    size_t maxTermWidth = 4; // Минимальная ширина
+    for (int term : terminals) {
+        std::string termName = getTerminalName(term);
+        maxTermWidth = std::max(maxTermWidth, termName.length());
+    }
+
+    size_t maxNTWidth = 4;
+    for (int nt : nonTerminals) {
+        std::string ntName = getNonTerminalName(nt);
+        maxNTWidth = std::max(maxNTWidth, ntName.length());
+    }
+
+    size_t stateColWidth = 10;
+    size_t actionCellWidth = maxTermWidth + 2;
+    size_t gotoCellWidth = maxNTWidth + 2;
+
+    // Функция для вывода разделительной линии
+    auto printSeparator = [&]() {
+        file << "+" << std::string(stateColWidth, '-');
+        file << "+" << std::string((terminals.size() * (actionCellWidth + 1)) - 1, '-');
+        file << "+" << std::string((nonTerminals.size() * (gotoCellWidth + 1)) - 1, '-');
+        file << "+\n";
+        };
+
+    // Заголовок таблицы
+    printSeparator();
+    file << "|" << std::setw(stateColWidth) << std::left << " State";
+    file << "|" << std::setw((terminals.size() * (actionCellWidth + 1)) - 1) << std::left << " ACTION";
+    file << "|" << std::setw((nonTerminals.size() * (gotoCellWidth + 1)) - 1) << std::left << " GOTO";
+    file << "|\n";
+    printSeparator();
+
+    // Заголовки столбцов
+    file << "|" << std::setw(stateColWidth) << "";
+    for (int term : terminals) {
+        file << "|" << std::setw(actionCellWidth) << std::left << getTerminalName(term);
+    }
+    for (int nt : nonTerminals) {
+        file << "|" << std::setw(gotoCellWidth) << std::left << getNonTerminalName(nt);
+    }
+    file << "|\n";
+    printSeparator();
+
+    // Собираем все состояния
+    std::set<int> allStates;
+    for (const auto& entry : actionTable) allStates.insert(entry.first);
+    for (const auto& entry : gotoTable) allStates.insert(entry.first);
+
+    // Заполняем данные для каждого состояния
+    for (int state : allStates) {
+        file << "|" << std::setw(stateColWidth) << std::left << state;
+
+        // ACTION часть
+        for (int term : terminals) {
+            std::string cellValue;
+            auto stateIt = actionTable.find(state);
+            if (stateIt != actionTable.end()) {
+                auto termIt = stateIt->second.find(term);
+                if (termIt != stateIt->second.end()) {
+                    const Action& action = termIt->second;
+                    switch (action.type) {
+                    case Action::SHIFT: cellValue = "s" + std::to_string(action.value); break;
+                    case Action::REDUCE: cellValue = "r" + std::to_string(action.value); break;
+                    case Action::ACCEPT: cellValue = "acc"; break;
+                    default: cellValue = ""; break;
+                    }
+                }
+            }
+            file << "|" << std::setw(actionCellWidth) << std::left << cellValue;
+        }
+
+        // GOTO часть
+        for (int nt : nonTerminals) {
+            std::string cellValue;
+            auto stateIt = gotoTable.find(state);
+            if (stateIt != gotoTable.end()) {
+                auto ntIt = stateIt->second.find(nt);
+                if (ntIt != stateIt->second.end()) {
+                    cellValue = std::to_string(ntIt->second.value);
+                }
+            }
+            file << "|" << std::setw(gotoCellWidth) << std::left << cellValue;
+        }
+
+        file << "|\n";
+        printSeparator();
+    }
+
+    file.close();
+}
+// Добавьте вспомогательный метод
+std::string Parser::getNonTerminalName(int nt) const {
+    switch (nt) {
+    case PROGRAM: return "PROGRAM";
+    case STMT_LIST: return "STMT_LIST";
+    case STMT: return "STMT";
+    case BLOCK: return "BLOCK";
+    case EXPR: return "EXPR";
+    case TERM: return "TERM";
+    case FACTOR: return "FACTOR";
+    default: return "NT" + std::to_string(nt);
+    }
+}
 std::string Parser::getTerminalName(int term) const {
     switch (term) {
     case T_BREAK: return "break";

@@ -1,6 +1,6 @@
  int main ( ) {
 
- if ( a == b + b  ; a == b ) {
+ if ( a == b + b  || a == b ) {
  a = b + d ; 
  a = a + b ;
  } else {

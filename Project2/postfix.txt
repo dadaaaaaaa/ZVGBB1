@@ -1,0 +1,5 @@
+a b b + == a b == || if
+a b = d +
+a a = b +
+else
+a a = b +

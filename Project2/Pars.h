@@ -102,7 +102,8 @@ public:
         std::stack<Symbol>& symbols,
         size_t& pos);
     const std::vector<std::string>& getErrors() const;
-
+    std::string getNonTerminalName(int nt) const;
+void generateFormattedLALRTableToFile(const std::string& filename);
 private:
     void writePostfixToFile(const std::string& postfixExpr, std::ofstream& postfixFile);
 
