@@ -1,0 +1,19 @@
+section .data
+a dd 0
+b dd 0
+c dd 0
+d dd 0
+
+section .text
+global _start
+_start:
+mov eax, 10
+mov eax, 2
+mov ebx, eax
+mov eax, [10]
+add eax, ebx
+mov [a], eax
+; Присвоение a
+mov eax, 1
+xor ebx, ebx
+int 0x80

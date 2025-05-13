@@ -5,37 +5,37 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include <set>
-#include <iomanip> // Для std::setw
-#include <algorithm> // Для std::max
-// Обновленный метод Parser::toPostfix
-// Обновленный метод Parser::toPostfix
+
 int Parser::precedence(const Token& token) {
     switch (getTerminalCode(token)) {
-    case T_OR_OR: return 1;
-    case T_AND: return 2;
-    case T_EQ_EQ: case T_ne_EQ: return 3;
-    case T_PLUS: case T_MINUS: return 4;
-    case T_MUL: return 5;
-    case T_EQ: return 6; // Присваивание имеет самый низкий приоритет
+    case T_EQ: return 1;          // Самый НИЗКИЙ приоритет
+    case T_OR_OR: return 2;       // Логическое ИЛИ
+    case T_AND: return 3;         // Логическое И
+    case T_EQ_EQ:                 // ==
+    case T_ne_EQ: return 4;       // !=
+    case T_PLUS:                  // +
+    case T_MINUS: return 5;       // -
+    case T_MUL: return 6;         // *
     default: return 0;
     }
 }
+
 bool Parser::isOperator(int terminalCode) {
     return terminalCode == T_PLUS || terminalCode == T_MINUS ||
         terminalCode == T_MUL || terminalCode == T_EQ ||
         terminalCode == T_EQ_EQ || terminalCode == T_ne_EQ ||
         terminalCode == T_OR_OR || terminalCode == T_AND;
 }
+
 std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
     std::stack<Token> operators;
-    std::vector<std::string> output; // Будем хранить только значения
-    std::string conditionKeyword; // Для хранения if/while
+    std::vector<std::string> output;
+    std::string conditionKeyword;
 
     for (const Token& token : exprTokens) {
         int terminalCode = getTerminalCode(token);
 
-        // Сохраняем if/while для добавления в конце
+        // Сохраняем условия для добавления в конец
         if (terminalCode == T_IF || terminalCode == T_WHILE || terminalCode == T_ELSE) {
             conditionKeyword = token.value;
             continue;
@@ -45,9 +45,12 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
             output.push_back(token.value);
         }
         else if (isOperator(terminalCode)) {
+            // Для правоассоциативных операторов (только '=') меняем условие
             while (!operators.empty() &&
                 getTerminalCode(operators.top()) != T_LPAREN &&
-                precedence(operators.top()) >= precedence(token)) {
+                (precedence(operators.top()) > precedence(token) ||
+                    (precedence(operators.top()) == precedence(token) &&
+                        terminalCode != T_EQ))) {  // Для всех кроме '=' считаем левоассоциативными
                 output.push_back(operators.top().value);
                 operators.pop();
             }
@@ -57,27 +60,23 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
             operators.push(token);
         }
         else if (terminalCode == T_RPAREN) {
-            while (!operators.empty() &&
-                getTerminalCode(operators.top()) != T_LPAREN) {
+            while (!operators.empty() && getTerminalCode(operators.top()) != T_LPAREN) {
                 output.push_back(operators.top().value);
                 operators.pop();
             }
-            if (!operators.empty()) operators.pop();
+            operators.pop();
         }
     }
 
-    // Добавляем оставшиеся операторы
     while (!operators.empty()) {
         output.push_back(operators.top().value);
         operators.pop();
     }
 
-    // Добавляем if/while в конец, если они были
     if (!conditionKeyword.empty()) {
         output.push_back(conditionKeyword);
     }
 
-    // Объединяем результат
     std::string result;
     for (const auto& val : output) {
         result += val + " ";
@@ -87,9 +86,10 @@ std::string Parser::toPostfix(const std::vector<Token>& exprTokens) {
     return result;
 }
 
-void Parser::writePostfixToFile(const std::string& postfixExpr, std::ofstream& postfixFile) {
+void Parser::write_postfix(const std::string& postfixExpr, std::ofstream& postfixFile, bool mode = true) {
     if (postfixFile.is_open()) {
-        postfixFile << postfixExpr << std::endl; // Записываем постфиксное выражение на новой строке
+        if (mode)postfixFile << postfixExpr << std::endl;
+        else postfixFile << postfixExpr << " ";
     }
     else {
         std::cerr << "Unable to open postfix file!" << std::endl; // Если не удалось открыть файл
@@ -140,7 +140,6 @@ void Parser::init_Product() {
     };
 }
 //таблица с тем что может стоять и где
-
 void Parser::init_actionTable() {
     //main 
     actionTable[1][T_int] = { Action::SHIFT, 2 };      // a
@@ -227,10 +226,8 @@ void Parser::init_actionTable() {
     actionTable[12][T_RSHIFT] = { Action::SHIFT, 13 };    // b >>
     actionTable[12][T_LSHIFT] = { Action::SHIFT, 13 };    // b <<
 
-
     //if 
     // Условный оператор
-
     actionTable[20][T_LPAREN] = { Action::SHIFT,21 };   // (
     actionTable[21][T_ID] = { Action::SHIFT, 22 };       // a
 
@@ -262,7 +259,6 @@ void Parser::init_actionTable() {
 
     actionTable[25][T_LBRACE] = { Action::SHIFT, 26 };    // {
 
-
     // Добавляем ожидание stmt_list после {
     actionTable[26][T_ID] = { Action::SHIFT, 27 };        // Ожидаем stmt внутри блока
     actionTable[26][T_IF] = { Action::SHIFT, 20 };        // Ожидаем if внутри блока
@@ -289,10 +285,6 @@ void Parser::init_gotoTable() {
     gotoTable[1][STMT] = { Action::GOTO, 3 };  // a;
 
 }
-
-
-
-
 
 void Parser::executeAction(const Action& action, std::stack<int>& states, std::stack<Symbol>& symbols, size_t& pos) {
     std::cout << "Executing action: ";
@@ -374,16 +366,18 @@ void Parser::executeAction(const Action& action, std::stack<int>& states, std::s
         break;
     }
 }
+
 const std::vector<std::string>& Parser::getErrors() const {
     return errors;
 }
+
 bool Parser::parse() {
-    generateFormattedLALRTableToFile("generated_lalr_table.txt");
     std::stack<int> states;
     std::stack<Symbol> symbols;
     std::vector<Token> expressionTokens;
     std::ofstream postfixFile("postfix.txt");
     states.push(0);
+    bool mode = true;
     if (tokens.size() >= 5 &&
         tokens[0].value == "int" &&
         tokens[1].value == "main" &&
@@ -425,8 +419,15 @@ bool Parser::parse() {
             std::cout << "State: " << state << ", Token: " << token.value
                 << " (type: " << token.tableType << ", index: " << token.index << ")\n";
             if (term == T_LBRACE) {
+                mode = false;
                 std::string postfixExpr = toPostfix(expressionTokens);
-                writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                write_postfix(postfixExpr, postfixFile, mode); // Записываем постфиксное выражение в файл
+                expressionTokens.clear();
+            }
+            if (term == T_RBRACE) {
+                mode = true;
+                std::string postfixExpr = toPostfix(expressionTokens);
+                write_postfix(postfixExpr, postfixFile, mode); // Записываем постфиксное выражение в файл
                 expressionTokens.clear();
             }
             if (term == T_SEMICOLON) {
@@ -434,7 +435,7 @@ bool Parser::parse() {
                 if (state == 12) {
                     executeAction({ Action::REDUCE, 3 }, states, symbols, pos);
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    write_postfix(postfixExpr, postfixFile, mode); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
@@ -442,7 +443,7 @@ bool Parser::parse() {
                 else if (!symbols.empty() && symbols.top().type == Symbol::NON_TERMINAL && symbols.top().nt == STMT) {
                     executeAction({ Action::REDUCE, 1 }, states, symbols, pos);  // stmt_list → stmt ; stmt_list
                     std::string postfixExpr = toPostfix(expressionTokens);
-                    writePostfixToFile(postfixExpr, postfixFile); // Записываем постфиксное выражение в файл
+                    write_postfix(postfixExpr, postfixFile, mode); // Записываем постфиксное выражение в файл
                     expressionTokens.clear();
                     continue;
                 }
@@ -517,6 +518,7 @@ void Parser::writeErrorToFile(const std::string& errorMessage) {
         std::cerr << "Unable to open error file!" << std::endl; // Если не удалось открыть файл
     }
 }
+
 std::string join(const std::vector<std::string>& vec, const std::string& delim) {
     std::string result;
     for (size_t i = 0; i < vec.size(); ++i) {
@@ -535,133 +537,7 @@ int Parser::getTerminalCode(const Token& token) const {
     }
     return token.tableType;
 }
-void Parser::generateFormattedLALRTableToFile(const std::string& filename) {
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Unable to open file for writing LALR table: " << filename << std::endl;
-        return;
-    }
 
-    // Собираем все терминалы и нетерминалы
-    std::set<int> terminals;
-    std::set<int> nonTerminals;
-
-    for (const auto& stateEntry : actionTable) {
-        for (const auto& termEntry : stateEntry.second) {
-            terminals.insert(termEntry.first);
-        }
-    }
-
-    for (const auto& stateEntry : gotoTable) {
-        for (const auto& ntEntry : stateEntry.second) {
-            nonTerminals.insert(ntEntry.first);
-        }
-    }
-
-    // Определяем максимальную ширину столбцов
-    size_t maxTermWidth = 4; // Минимальная ширина
-    for (int term : terminals) {
-        std::string termName = getTerminalName(term);
-        maxTermWidth = std::max(maxTermWidth, termName.length());
-    }
-
-    size_t maxNTWidth = 4;
-    for (int nt : nonTerminals) {
-        std::string ntName = getNonTerminalName(nt);
-        maxNTWidth = std::max(maxNTWidth, ntName.length());
-    }
-
-    size_t stateColWidth = 10;
-    size_t actionCellWidth = maxTermWidth + 2;
-    size_t gotoCellWidth = maxNTWidth + 2;
-
-    // Функция для вывода разделительной линии
-    auto printSeparator = [&]() {
-        file << "+" << std::string(stateColWidth, '-');
-        file << "+" << std::string((terminals.size() * (actionCellWidth + 1)) - 1, '-');
-        file << "+" << std::string((nonTerminals.size() * (gotoCellWidth + 1)) - 1, '-');
-        file << "+\n";
-        };
-
-    // Заголовок таблицы
-    printSeparator();
-    file << "|" << std::setw(stateColWidth) << std::left << " State";
-    file << "|" << std::setw((terminals.size() * (actionCellWidth + 1)) - 1) << std::left << " ACTION";
-    file << "|" << std::setw((nonTerminals.size() * (gotoCellWidth + 1)) - 1) << std::left << " GOTO";
-    file << "|\n";
-    printSeparator();
-
-    // Заголовки столбцов
-    file << "|" << std::setw(stateColWidth) << "";
-    for (int term : terminals) {
-        file << "|" << std::setw(actionCellWidth) << std::left << getTerminalName(term);
-    }
-    for (int nt : nonTerminals) {
-        file << "|" << std::setw(gotoCellWidth) << std::left << getNonTerminalName(nt);
-    }
-    file << "|\n";
-    printSeparator();
-
-    // Собираем все состояния
-    std::set<int> allStates;
-    for (const auto& entry : actionTable) allStates.insert(entry.first);
-    for (const auto& entry : gotoTable) allStates.insert(entry.first);
-
-    // Заполняем данные для каждого состояния
-    for (int state : allStates) {
-        file << "|" << std::setw(stateColWidth) << std::left << state;
-
-        // ACTION часть
-        for (int term : terminals) {
-            std::string cellValue;
-            auto stateIt = actionTable.find(state);
-            if (stateIt != actionTable.end()) {
-                auto termIt = stateIt->second.find(term);
-                if (termIt != stateIt->second.end()) {
-                    const Action& action = termIt->second;
-                    switch (action.type) {
-                    case Action::SHIFT: cellValue = "s" + std::to_string(action.value); break;
-                    case Action::REDUCE: cellValue = "r" + std::to_string(action.value); break;
-                    case Action::ACCEPT: cellValue = "acc"; break;
-                    default: cellValue = ""; break;
-                    }
-                }
-            }
-            file << "|" << std::setw(actionCellWidth) << std::left << cellValue;
-        }
-
-        // GOTO часть
-        for (int nt : nonTerminals) {
-            std::string cellValue;
-            auto stateIt = gotoTable.find(state);
-            if (stateIt != gotoTable.end()) {
-                auto ntIt = stateIt->second.find(nt);
-                if (ntIt != stateIt->second.end()) {
-                    cellValue = std::to_string(ntIt->second.value);
-                }
-            }
-            file << "|" << std::setw(gotoCellWidth) << std::left << cellValue;
-        }
-
-        file << "|\n";
-        printSeparator();
-    }
-
-    file.close();
-}
-// Добавьте вспомогательный метод
-std::string Parser::getNonTerminalName(int nt) const {
-    switch (nt) {
-    case PROGRAM: return "PROGRAM";
-    case STMT_LIST: return "STMT_LIST";
-    case STMT: return "STMT";
-    case BLOCK: return "BLOCK";
-    case EXPR: return "EXPR";
-    case TERM: return "TERM";
-    case FACTOR: return "FACTOR";
-    default: return "NT" + std::to_string(nt);
-    }
-}
 std::string Parser::getTerminalName(int term) const {
     switch (term) {
     case T_BREAK: return "break";

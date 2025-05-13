@@ -91,9 +91,10 @@ public:
         T_COMMA = 207,      // ,
         T_ID = 30,           // Идентификаторы
         T_NUM = 40,           // Числовые константы
-        
+
         T_EOF = 0
     };
+    void write_postfix(const std::string& postfixExpr, std::ofstream& postfixFile, bool mode );
 
     Parser(const std::vector<Token>& tokens, HashTable& hashTable);
     bool parse();
@@ -102,10 +103,9 @@ public:
         std::stack<Symbol>& symbols,
         size_t& pos);
     const std::vector<std::string>& getErrors() const;
-    std::string getNonTerminalName(int nt) const;
-void generateFormattedLALRTableToFile(const std::string& filename);
+
 private:
-    void writePostfixToFile(const std::string& postfixExpr, std::ofstream& postfixFile);
+
 
     std::string toPostfix(const std::vector<Token>& exprTokens);
     int precedence(const Token& token);
