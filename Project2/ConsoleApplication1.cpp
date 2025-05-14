@@ -2,7 +2,7 @@
 #include "Scanner.h"
 #include <clocale>
 #include "Pars.h"
-#include "Interpretator.h"
+
 
 void displayMenu() {
     std::cout << "=== Меню ===\n";
@@ -17,8 +17,7 @@ void displayMenu() {
     std::cout << "9. Получить атрибут лексемы\n";
     std::cout << "10. Запустить сканер\n";
     std::cout << "11. Запустить парсер\n";
-    std::cout << "12. Выполнить программу по постфиксной записи\n";
-    std::cout << "13. Выход\n";
+    std::cout << "12. Выход\n";
     std::cout << "Выберите опцию: ";
 }
 
@@ -37,7 +36,7 @@ int main() {
     int choice;
     do {
         displayMenu();
-        choice = HashTable::getValidatedInput("", 1, 13);
+        choice = HashTable::getValidatedInput("", 1, 12);
 
         switch (choice) {
         case 1: { // Добавить лексему вручную
@@ -169,21 +168,7 @@ int main() {
             }
             break;
         }
-        case 12: { // Выполнить программу по постфиксной записи
-            std::string filename = "postfix.txt";
-            std::cout << "Выполняется программа по постфиксной записи из файла: " << filename << "\n";
-            try {
-                PostfixTranslator translator(ht); // Создаем объект
-                translator.processFile(filename); // Вызываем метод через объект
-                std::cout << "Переменные после выполнения:\n";
-                translator.printVariables();
-            }
-            catch (const std::exception& e) {
-                std::cerr << "Ошибка при выполнении постфиксной записи: " << e.what() << "\n";
-            }
-            break;
-        }
-        case 13: { // Выход
+        case 12: { // Выход
             std::cout << "Выход из программы.\n";
             break;
         }
@@ -191,11 +176,7 @@ int main() {
             std::cout << "Неверный выбор. Попробуйте снова.\n";
         }
         }
-    } while (choice != 13);
-
-    // Очистка памяти
-    delete currentScanner;
-    delete currentParser;
+    } while (choice != 12);
 
     return 0;
 }

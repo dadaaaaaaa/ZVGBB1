@@ -104,10 +104,10 @@ Unexpected ==, expected: ||, ), |, &, +, -, *, >>, <<
 Unexpected else, expected: }
 Unexpected +, expected: !=, ==, |, ), ||, &
 Unexpected +, expected: !=, ==, |, ), ||, &
-Unexpected int, expected: identifier, unknown, if, while, }
-Unexpected int, expected: identifier, unknown, if, while, }
-Unexpected int, expected: identifier, unknown, if, while, }
-Unexpected ){, expected: ||, ), |, &, +, -, *, >>, <<
-Unexpected b, expected: }
-Unexpected b, expected: }
-Unexpected b, expected: }
+Unexpected b, expected: {
+Unexpected b, expected: {
+Unexpected b, expected: {
+Unexpected b, expected: =, /=
+Unexpected =, expected: ;, +, -, *, >>, <<
+Unexpected b, expected: =, /=
+Unexpected b, expected: =, /=

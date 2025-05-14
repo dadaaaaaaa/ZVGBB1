@@ -1,6 +1,12 @@
-int main ( ) {
-a = 2 ;
-b = 4 ;
-while ( a == b ) {
-}
-}
+ int main ( ) {
+ a = 2 ;
+ b = 4 ;
+ b = b + a ;
+ while ( a != b  || a == b + 2 ) {
+ a = b + b ;
+ if ( a != b ) {
+ a = a + 2 ;
+ }
+ } 
+
+ }
